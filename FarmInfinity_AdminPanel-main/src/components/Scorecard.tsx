@@ -12,8 +12,13 @@ export default function ScoreCard({ farmerId, applicationId, financialYear}: pro
     async function fetchScoreCard() {
       try {
         const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/credit-report?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
+        const token = localStorage.getItem('token');
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const text = await response.text();
         setHtmlContent(text);
       } catch (err) {
