@@ -43,9 +43,10 @@ const Farmers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 50;
 
   useEffect(() => {
     const fetchFarmers = async () => {
@@ -68,6 +69,7 @@ const Farmers = () => {
         }));
 
         setFarmers(fetchedFarmers);
+        setTotalItems(response.data.total);
         setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
       } catch (error) {
         console.error("Error fetching farmers:", error);
@@ -126,13 +128,51 @@ const Farmers = () => {
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
+      window.scrollTo(0, 0);
     }
   };
 
   const handlePrevPage = () => {
     if (currentPage > 1) {
       setCurrentPage(prev => prev - 1);
+      window.scrollTo(0, 0);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const renderPaginationNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          className={`px-3 py-1 rounded-lg text-sm font-medium ${
+            currentPage === i
+              ? 'bg-green-100 text-green-600'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return pages;
   };
 
   const renderGridView = () => (
@@ -292,10 +332,10 @@ const Farmers = () => {
             {viewMode === 'grid' ? renderGridView() : renderListView()}
 
             {/* Pagination */}
-            <div className="mt-8 flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center text-sm text-gray-500">
                 <span>
-                  Showing page {currentPage} of {totalPages}
+                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} farmers
                 </span>
               </div>
               
@@ -308,6 +348,11 @@ const Farmers = () => {
                   <FaChevronLeft className="h-4 w-4" />
                   Previous
                 </button>
+
+                <div className="hidden sm:flex items-center gap-1">
+                  {renderPaginationNumbers()}
+                </div>
+
                 <button
                   onClick={handleNextPage}
                   disabled={currentPage >= totalPages}
