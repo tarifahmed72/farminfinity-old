@@ -287,22 +287,62 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const renderByType = (type: string, data: any) => {
     switch (type) {
       case 'Farming':
-        return renderFarmingDetails(data);
+        return (
+          <>
+            {renderFarmingDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Dairy':
-        return renderDairyDetails(data);
+        return (
+          <>
+            {renderDairyDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Duckery':
       case 'Poultry':
-        return renderPoultryDetails(type, data);
+        return (
+          <>
+            {renderPoultryDetails(type, data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Plantation':
-        return renderPlantationDetails(data);
+        return (
+          <>
+            {renderPlantationDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Goat':
-        return renderGoatDetails(data);
+        return (
+          <>
+            {renderGoatDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Mushroom':
-        return renderMushroomDetails(data);
+        return (
+          <>
+            {renderMushroomDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Fishery':
-        return renderFisheryDetails(data);
+        return (
+          <>
+            {renderFisheryDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       case 'Piggery':
-        return renderPiggeryDetails(data);
+        return (
+          <>
+            {renderPiggeryDetails(data)}
+            {renderImages(data.images?.[0] || [], `${type} Images`)}
+          </>
+        );
       default:
         return <p className="text-gray-500">No detailed view available for {type}</p>;
     }
