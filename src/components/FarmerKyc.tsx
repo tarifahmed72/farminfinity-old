@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { useState } from 'react';
+import axiosInstance from '../utils/axios';
 
 type FarmerKycProps = {
   applicationId?: string;
@@ -26,7 +26,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       setErrorMsg('');
       setActivity(null);
 
-      const { data } = await axios.get(`https://dev-api.farmeasytechnologies.com/api/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
+      const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
       
       if (!data || Object.keys(data).length === 0) {
         setErrorMsg('No activity data available for selected financial year.');

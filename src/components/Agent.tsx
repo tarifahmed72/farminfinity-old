@@ -1,5 +1,6 @@
 import  { useState, useEffect } from 'react';
-import axios, { AxiosResponse } from 'axios';
+import { AxiosResponse } from 'axios';
+import axiosInstance from '../utils/axios';
 
 interface AgentData {
   id: string;
@@ -33,8 +34,8 @@ const Agent= () => {
     const fetchAgentsData = async () => {
       try {
         setLoading(true);
-        const response: AxiosResponse<AgentData[]> = await axios.get(
-          `https://dev-api.farmeasytechnologies.com/api/field_agents/?skip=0&limit=10`
+        const response: AxiosResponse<AgentData[]> = await axiosInstance.get(
+          `/field_agents/?skip=0&limit=10`
         );
         setAgents(response.data);
       } catch (err: any) {

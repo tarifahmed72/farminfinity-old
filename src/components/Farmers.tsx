@@ -14,60 +14,24 @@ interface ApiFarmer {
   updated_at: string;
 }
 
+interface DisplayFarmer {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  status: number;
+  gender: string;
+  createdOn: string;
+  approval: string;
+  amount: string;
+}
+
 const Farmers = () => {
-  const navigate = useNavigate();
-
-  const hardcodedFarmers = [
-    {
-      id: 1,
-      name: "Kaustav",
-      gender: "Male",
-      phone: "8399051459",
-      city: "",
-      createdOn: "11-Nov-2024",
-      status: "Lead",
-      approval: "None",
-      amount: "",
-    },
-    {
-      id: 2,
-      name: "Pragyan",
-      gender: "Male",
-      phone: "7575985255",
-      city: "",
-      createdOn: "28-Aug-2024",
-      status: "Lead",
-      approval: "None",
-      amount: "",
-    },
-    {
-      id: 3,
-      name: "Santanu",
-      gender: "Male",
-      phone: "8011051894",
-      city: "",
-      createdOn: "28-Aug-2024",
-      status: "Lead",
-      approval: "None",
-      amount: "",
-    },
-    {
-      id: 4,
-      name: "Anant",
-      gender: "Male",
-      phone: "8822009123",
-      city: "Golaghat",
-      createdOn: "15-Jul-2024",
-      status: "Lead",
-      approval: "None",
-      amount: "Rs.5,000-Rs.10,000",
-    },
-  ];
-
-  const [farmers, setFarmers] = useState(hardcodedFarmers);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [farmers, setFarmers] = useState<DisplayFarmer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const farmersPerPage = 5;
 
@@ -79,20 +43,20 @@ const Farmers = () => {
         // Adjust the data mapping to match the API response structure
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
           id: farmer.id,
-          name: farmer.name || "N/A", // Handle cases where name is null
-          gender: "N/A", // Gender is not present in the API response
+          name: farmer.name || "N/A",
           phone: farmer.phone_no,
-          city: farmer.village || "N/A", // Assuming 'village' maps to city
-          createdOn: new Date(farmer.created_at).toLocaleDateString(), // Format the date
-          status: getStatusText(farmer.status), // Function to convert status code to text
-          approval: "N/A", // Approval is not present in the API response
-          amount: "N/A", // Amount is not present in the API response
+          city: farmer.village || "N/A",
+          status: farmer.status || 0,
+          gender: "N/A", // Not available in API
+          createdOn: new Date(farmer.created_at).toLocaleDateString(),
+          approval: "N/A", // Not available in API
+          amount: "N/A", // Not available in API
         }));
 
-        setFarmers([...hardcodedFarmers, ...fetchedFarmers]);
-      } catch (err) {
-        console.error("Error fetching farmers:", err);
-        setError("Failed to fetch farmer data.");
+        setFarmers(fetchedFarmers);
+      } catch (error) {
+        console.error("Error fetching farmers:", error);
+        setError("Failed to fetch farmers data");
       } finally {
         setLoading(false);
       }
@@ -100,18 +64,6 @@ const Farmers = () => {
 
     fetchFarmers();
   }, []);
-
-  const getStatusText = (status: Number|null) => {
-    switch (status) {
-      case 1:
-        return "Lead";
-      case 2:
-        return "Contacted";
-      // Add more status mappings as needed based on your API documentation
-      default:
-        return "Unknown";
-    }
-  };
 
   // Filtered farmers based on search query
   const filteredFarmers = farmers.filter(
@@ -147,7 +99,6 @@ const Farmers = () => {
           <option>All Statuses</option>
           <option>Lead</option>
           <option>Contacted</option>
-          {/* Add more status options based on your getStatusText function */}
         </select>
       </div>
 

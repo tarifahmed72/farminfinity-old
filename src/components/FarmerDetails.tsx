@@ -154,12 +154,9 @@ const FarmerDetails: React.FC = () => {
         console.log("KYC Response:", kycResponse.data);
 
         const poi_id = kycResponse.data[0].poi_version_id;
-        console.log(kycResponse.data[0].poa_version_id);
-        console.log(kyc);
-
         const poa_id = kycResponse.data[0].poa_version_id;
         setKyc(kycResponse.data);
-        console.log("KYC Response:", kyc);
+
         // Fetch POI
         if (poi_id) {
           const poiResponse = await axiosInstance.get<POIData>(
