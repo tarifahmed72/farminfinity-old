@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axiosInstance from '../utils/axios';
 import axios from 'axios';
+import { FaCalendarAlt, FaLeaf, FaTractor, FaWater, FaWarehouse, FaShieldAlt } from 'react-icons/fa';
 
 type FarmerKycProps = {
   applicationId?: string;
@@ -23,7 +24,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [financialYear, setFinancialYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
+  const [activeTab, setActiveTab] = useState('primary');
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const getSignedUrl = async (filename: string) => {
@@ -110,308 +111,210 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     if (year) fetchActivity(year);
   };
 
-  const renderImages = (images: string[], title: string) => {
-    if (!images?.length) return null;
+  const renderSeasons = (seasons: any[]) => {
+    if (!seasons?.length) return null;
     return (
-      <div className="my-6">
-        <h3 className="text-lg font-semibold mb-3">{title}:</h3>
-        <div className="flex flex-wrap gap-4">
-          {images.map((filename, idx) => (
-            <img
-              key={idx}
-              src={signedUrls[filename] || ''}
-              alt={`${title} ${idx + 1}`}
-              className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
-            />
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <FaCalendarAlt className="text-green-600" />
+          Seasonal Activities
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {seasons.map((season: any, idx: number) => (
+            <div key={idx} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <h4 className="text-lg font-medium text-gray-900 mb-3">{season.season_name}</h4>
+              <div className="space-y-2 text-gray-600">
+                <p><span className="font-medium">Crops:</span> {season.crops.map((c: any) => c.crop_name).join(', ')}</p>
+                <p><span className="font-medium">Area:</span> {season.cultivation_area} {season.area_unit}</p>
+                {season.expected_yield && (
+                  <p><span className="font-medium">Expected Yield:</span> {season.expected_yield}</p>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       </div>
     );
   };
 
-  const renderSeasons = (seasons: any[]) => (
-    <div className="my-6">
-      <h3 className="text-2xl font-bold text-green-700 mb-4">Seasons & Crops</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {seasons.map((season, idx) => (
-          <div
-            key={idx}
-            className="bg-white/70 backdrop-blur-sm border border-green-200 rounded-xl p-5 shadow-sm hover:shadow-md transition"
-          >
-            <p className="text-lg font-semibold text-green-800 mb-2">🌾 Season: {season.season_name}</p>
-            <p><span className="font-semibold">Crops:</span> {season.crops?.map((c: any) => c.crop_name).join(', ') || 'N/A'}</p>
-            {season.crop_inputs?.length > 0 && (
-              <p><span className="font-semibold">Inputs:</span> {season.crop_inputs.map((input: any) => input.crop_input_name).join(', ')}</p>
-            )}
-          </div>
-        ))}
+  const renderImages = (images: string[], title: string) => {
+    if (!images?.length) return null;
+    return (
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">{title}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {images.map((img, idx) => (
+            <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all">
+              <img
+                src={signedUrls[img] || ''}
+                alt={`${title} ${idx + 1}`}
+                className="w-full h-full object-cover hover:scale-105 transition-transform"
+              />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderFarmingDetails = (data: any) => (
-    <div className="bg-green-50 p-8 rounded-2xl shadow-md border border-green-200 mb-6">
-      <div className="flex items-center gap-3 mb-6">
-        <img src="/farm-icon.svg" alt="Farm" className="w-8 h-8" />
-        <h2 className="text-3xl font-extrabold text-green-800 tracking-wide">Farming Details</h2>
-      </div>
-      <div className="space-y-3 text-gray-700 text-lg leading-relaxed">
-        <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
-        <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
-        <p><span className="font-semibold">Irrigation Types:</span> {data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
-        <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
-        <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured || 'N/A'}</p>
-        <p><span className="font-semibold">Post Harvest Storage Available:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
-      </div>
-
-      {renderSeasons(data.seasons)}
-      {renderImages(data.images?.[0] || [], "Farm Images")}
-
-      {data.field_gps_image && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">Field GPS Image:</h3>
-          <img 
-            src={signedUrls[data.field_gps_image] || ''} 
-            alt="Field GPS" 
-            className="w-64 h-64 object-cover rounded-md shadow" 
-          />
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <FaLeaf className="h-6 w-6 text-white" />
+          <h2 className="text-xl font-semibold text-white">Farming Details</h2>
         </div>
-      )}
-    </div>
-  );
-
-  const renderDairyDetails = (data: any) => (
-    <div className="bg-blue-50 p-8 rounded-2xl shadow-md border border-blue-200 mb-6">
-      <div className="flex items-center gap-3 mb-6">
-        <img src="/dairy-icon.svg" alt="Dairy" className="w-8 h-8" />
-        <h2 className="text-3xl font-extrabold text-blue-800 tracking-wide">Dairy Details</h2>
       </div>
-      <div className="space-y-3 text-gray-700 text-lg leading-relaxed">
-        <p><span className="font-semibold">No. of Cows:</span> {data.no_of_livestock_cow}</p>
-        <p><span className="font-semibold">No. of Bulls:</span> {data.no_of_livestock_bull}</p>
-        <p><span className="font-semibold">No. of Calves:</span> {data.no_of_livestock_calves}</p>
-        <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
-        <p><span className="font-semibold">Facility Dimensions:</span> {data.livestock_facility_dimension || 'N/A'}</p>
+      
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FaTractor className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-500">Land Owned</p>
+                <p className="text-lg font-medium">{data.land_owned} {data.area_unit}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaLeaf className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-500">Cultivation Area</p>
+                <p className="text-lg font-medium">{data.cultivation_area} {data.area_unit}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FaWater className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-500">Irrigation Types</p>
+                <p className="text-lg font-medium">{data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaTractor className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm text-gray-500">Equipment</p>
+                <p className="text-lg font-medium">{data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FaShieldAlt className="h-5 w-5 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-500">Crop Insurance</p>
+                <p className="text-lg font-medium">{data.is_crop_insured || 'N/A'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaWarehouse className="h-5 w-5 text-yellow-600" />
+              <div>
+                <p className="text-sm text-gray-500">Post Harvest Storage</p>
+                <p className="text-lg font-medium">{data.is_post_harvest_storage_available ? 'Available' : 'Not Available'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {renderSeasons(data.seasons)}
+        {renderImages(data.images?.[0] || [], "Farm Images")}
+
+        {data.field_gps_image && (
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Field GPS Location</h3>
+            <div className="aspect-square max-w-md rounded-xl overflow-hidden border border-gray-200">
+              <img 
+                src={signedUrls[data.field_gps_image] || ''} 
+                alt="Field GPS" 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
 
-      {data.facilities?.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-3">Facilities:</h3>
-          <p>{data.facilities.map((f: any) => f.facility_name).join(', ')}</p>
-        </div>
-      )}
-
-      {renderImages(data.images?.[0] || [], "Dairy Facility Images")}
-
-      {data.facility_gps_image && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
-          <img 
-            src={signedUrls[data.facility_gps_image] || ''} 
-            alt="Facility GPS" 
-            className="w-64 h-64 object-cover rounded-md shadow" 
-          />
-        </div>
-      )}
-    </div>
-  );
-  const renderPoultryDetails = (title: string, data: any) => (
-    <div className="bg-yellow-50 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-yellow-700 mb-4">{title} Details</h2>
-      <p><strong>Hens:</strong> {data.no_of_hen}</p>
-      <p><strong>Cocks:</strong> {data.no_of_cock}</p>
-      <p><strong>Coop Capacity:</strong> {data.coop_capacity || 'N/A'}</p>
-      <p><strong>Feed Consumption:</strong> {data.feed_consumption || 'N/A'}</p>
-      <p><strong>Insurance:</strong> {data.insurance || 'N/A'}</p>
-      <p><strong>Facility Dimension:</strong> {data.coop_facility_dimension || 'N/A'}</p>
-      {data.facilities?.length > 0 && <p><strong>Facilities:</strong> {data.facilities.map((f: any) => f.facility_name).join(', ')}</p>}
-    </div>
-  );
-  const renderPlantationDetails = (data: any) => (
-    <div className="bg-green-100 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-green-800 mb-4">Plantation Details</h2>
-      <p><strong>Cultivation Area:</strong> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
-      <p><strong>Crop Insurance:</strong> {data.is_crop_insured ? 'Yes' : 'No'}</p>
-      <p><strong>Post Harvest Facility:</strong> {data.is_post_harvest_facility_available ? 'Yes' : 'No'}</p>
-      <p><strong>Irrigations:</strong> {Object.values(data.irrigations || {}).map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
-      <p><strong>Equipments:</strong> {Object.values(data.equipments || {}).map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
-    </div>
-  );
-  const renderGoatDetails = (data: any) => (
-    <div className="bg-purple-100 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-purple-800 mb-4">Goat Details</h2>
-      <p><strong>Male Goats:</strong> {data.no_of_male_goat}</p>
-      <p><strong>Female Goats:</strong> {data.no_of_female_goat}</p>
-      <p><strong>Lambs:</strong> {data.no_of_lambs}</p>
-      <p><strong>Shed Capacity:</strong> {data.shed_capacity || 'N/A'}</p>
-      <p><strong>Feed Consumption:</strong> {data.feed_consumption || 'N/A'}</p>
-      <p><strong>Insurance:</strong> {data.insurance || 'N/A'}</p>
-      <p><strong>Facility Dimension:</strong> {data.shed_facility_dimension || 'N/A'}</p>
-      {data.facilities?.length > 0 && <p><strong>Facilities:</strong> {data.facilities.map((f: any) => f.facility_name).join(', ')}</p>}
-    </div>
-  );
-  const renderMushroomDetails = (data: any) => (
-    <div className="bg-pink-100 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-pink-800 mb-4">Mushroom Details</h2>
-      <p><strong>No. of Cylinders:</strong> {data.no_of_cylinders}</p>
-      <p><strong>Shed Capacity:</strong> {data.shed_capacity || 'N/A'}</p>
-      <p><strong>Insurance:</strong> {data.insurance || 'N/A'}</p>
-      <p><strong>Facility Dimension:</strong> {data.shed_facility_dimension || 'N/A'}</p>
-      {data.facilities?.length > 0 && <p><strong>Facilities:</strong> {data.facilities.map((f: any) => f.facility_name).join(', ')}</p>}
-    </div>
-  );
-  const renderFisheryDetails = (data: any) => (
-    <div className="bg-blue-100 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-blue-800 mb-4">Fishery Details</h2>
-      <p><strong>No. of Fish:</strong> {data.no_of_fish_owned}</p>
-      <p><strong>Pond Capacity:</strong> {data.pond_capacity || 'N/A'}</p>
-      <p><strong>Feed Consumption:</strong> {data.feed_consumption || 'N/A'}</p>
-      <p><strong>Insurance:</strong> {data.insurance || 'N/A'}</p>
-      <p><strong>Pond Facility Dimension:</strong> {data.pond_facility_dimension || 'N/A'}</p>
-      {data.facilities?.length > 0 && <p><strong>Facilities:</strong> {data.facilities.map((f: any) => f.facility_name).join(', ')}</p>}
-    </div>
-  );
-  const renderPiggeryDetails = (data: any) => (
-    <div className="bg-red-100 p-6 rounded-2xl shadow border mb-6">
-      <h2 className="text-2xl font-bold text-red-800 mb-4">Piggery Details</h2>
-      <p><strong>No. of Pigs:</strong> {data.no_of_pig_owned}</p>
-      <p><strong>Breeder Pig Available:</strong> {data.is_breeder_pig_available ? 'Yes' : 'No'}</p>
-      <p><strong>Pen Capacity:</strong> {data.pen_capacity || 'N/A'}</p>
-      <p><strong>Feed Consumption:</strong> {data.feed_consumption || 'N/A'}</p>
-      <p><strong>Insurance:</strong> {data.insurance || 'N/A'}</p>
-      <p><strong>Facility Dimension:</strong> {data.pen_facility_dimension || 'N/A'}</p>
-      {data.facilities?.length > 0 && <p><strong>Facilities:</strong> {data.facilities.map((f: any) => f.facility_name).join(', ')}</p>}
-    </div>
-  );
-            
-  const renderByType = (type: string, data: any) => {
-    switch (type) {
-      case 'Farming':
-        return (
-          <>
-            {renderFarmingDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Dairy':
-        return (
-          <>
-            {renderDairyDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Duckery':
-      case 'Poultry':
-        return (
-          <>
-            {renderPoultryDetails(type, data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Plantation':
-        return (
-          <>
-            {renderPlantationDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Goat':
-        return (
-          <>
-            {renderGoatDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Mushroom':
-        return (
-          <>
-            {renderMushroomDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Fishery':
-        return (
-          <>
-            {renderFisheryDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      case 'Piggery':
-        return (
-          <>
-            {renderPiggeryDetails(data)}
-            {renderImages(data.images?.[0] || [], `${type} Images`)}
-          </>
-        );
-      default:
-        return <p className="text-gray-500">No detailed view available for {type}</p>;
-    }
-  };
-  
+  const { secondary_activity } = activity || {};
 
   const renderActivitySection = () => {
     if (!activity) return null;
 
-    const { primary_activity_type, primary_activity, secondary_activity_type, secondary_activity } = activity;
+    const { primary_activity } = activity;
 
     if (activeTab === 'primary') {
-      return renderByType(primary_activity_type, primary_activity);
-    }
-    if (activeTab === 'secondary' && secondary_activity_type) {
-      return renderByType(secondary_activity_type, secondary_activity);
+      return renderFarmingDetails(primary_activity);
     }
 
-    return <p className="text-gray-500">No secondary activity available.</p>;
+    return renderFarmingDetails(secondary_activity);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        {errorMsg}
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <section className="mb-8">
-        <label className="block mb-3 font-semibold text-lg">Select Financial Year:</label>
+    <div className="space-y-8">
+      {/* Year Selection */}
+      <div className="flex items-center gap-4">
         <select
-          className="border p-3 rounded-md w-72 shadow-sm focus:ring-2 focus:ring-green-400"
           value={financialYear}
           onChange={handleYearChange}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
         >
-          <option value="">-- Select Year --</option>
+          <option value="">Select Financial Year</option>
           <option value="2024-25">2024-25</option>
           <option value="2023-24">2023-24</option>
           <option value="2022-23">2022-23</option>
         </select>
-      </section>
+      </div>
 
-      <section>
-        {loading ? (
-          <p className="text-blue-600 font-semibold animate-pulse">Loading activity data...</p>
-        ) : errorMsg ? (
-          <p className="text-red-500 font-semibold">{errorMsg}</p>
-        ) : activity ? (
-          <>
-            {/* Tabs */}
-            <div className="flex gap-6 mb-8">
-              <button
-                className={`px-5 py-2 rounded-full shadow ${activeTab === 'primary' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                onClick={() => setActiveTab('primary')}
-              >
-                Primary Activity
-              </button>
-              {activity.secondary_activity_type && (
-                <button
-                  className={`px-5 py-2 rounded-full shadow ${activeTab === 'secondary' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                  onClick={() => setActiveTab('secondary')}
-                >
-                  Secondary Activity
-                </button>
-              )}
-            </div>
+      {activity && (
+        <div className="space-y-8">
+          {/* Activity Type Tabs */}
+          <div className="flex gap-4 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('primary')}
+              className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'primary'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Primary Activity
+            </button>
+            <button
+              onClick={() => setActiveTab('secondary')}
+              className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'secondary'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Secondary Activity
+            </button>
+          </div>
 
-            {/* Activity Section */}
-            {renderActivitySection()}
-          </>
-        ) : (
-          <p className="text-gray-500">No activity data available. Please select a financial year.</p>
-        )}
-      </section>
+          {/* Activity Details */}
+          {renderActivitySection()}
+        </div>
+      )}
     </div>
   );
 };
