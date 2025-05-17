@@ -26,6 +26,14 @@ interface DisplayFarmer {
   amount: string;
 }
 
+interface PaginationResponse {
+  data: ApiFarmer[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 const Farmers = () => {
   const [farmers, setFarmers] = useState<DisplayFarmer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +41,16 @@ const Farmers = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const farmersPerPage = 5;
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     const fetchFarmers = async () => {
       try {
-        const response = await axiosInstance.get("/farmers/");
+        setLoading(true);
+        const response = await axiosInstance.get<PaginationResponse>(
+          `/farmers/?page=${currentPage}&limit=${ITEMS_PER_PAGE}`
+        );
 
         // Adjust the data mapping to match the API response structure
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
@@ -54,6 +66,7 @@ const Farmers = () => {
         }));
 
         setFarmers(fetchedFarmers);
+        setTotalPages(response.data.total_pages);
       } catch (error) {
         console.error("Error fetching farmers:", error);
         setError("Failed to fetch farmers data");
@@ -63,7 +76,7 @@ const Farmers = () => {
     };
 
     fetchFarmers();
-  }, []);
+  }, [currentPage]); // Re-fetch when page changes
 
   // Filtered farmers based on search query
   const filteredFarmers = farmers.filter(
@@ -72,15 +85,21 @@ const Farmers = () => {
       farmer.phone.includes(searchQuery)
   );
 
-  // Pagination logic
-  const indexOfLastFarmer = currentPage * farmersPerPage;
-  const indexOfFirstFarmer = indexOfLastFarmer - farmersPerPage;
-  const currentFarmers = filteredFarmers.slice(indexOfFirstFarmer, indexOfLastFarmer);
-  const totalPages = Math.ceil(filteredFarmers.length / farmersPerPage);
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1); // Reset to first page on search
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
   };
 
   return (
@@ -126,7 +145,7 @@ const Farmers = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentFarmers.map((farmer) => (
+                {filteredFarmers.map((farmer) => (
                   <tr
                     key={farmer.id}
                     onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
@@ -151,18 +170,18 @@ const Farmers = () => {
           <div className="mt-4 flex justify-center gap-2">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              onClick={handlePrevPage}
+              className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
-              ⬅ Prev
+              ⬅ Previous
             </button>
-            <span className="px-3 py-1">
+            <span className="px-4 py-2 text-gray-700">
               Page {currentPage} of {totalPages}
             </span>
             <button
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              onClick={handleNextPage}
+              className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
               Next ➡
             </button>
