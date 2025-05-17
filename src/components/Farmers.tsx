@@ -48,9 +48,12 @@ const Farmers = () => {
     const fetchFarmers = async () => {
       try {
         setLoading(true);
+        console.log('Fetching page:', currentPage); // Debug log
         const response = await axiosInstance.get<PaginationResponse>(
-          `/farmers/?page=${currentPage}&limit=${ITEMS_PER_PAGE}`
+          `/farmers/?skip=${(currentPage - 1) * ITEMS_PER_PAGE}&limit=${ITEMS_PER_PAGE}`
         );
+        
+        console.log('API Response:', response.data); // Debug log
 
         // Adjust the data mapping to match the API response structure
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
@@ -66,7 +69,10 @@ const Farmers = () => {
         }));
 
         setFarmers(fetchedFarmers);
-        setTotalPages(response.data.total_pages);
+        // Calculate total pages based on total items and items per page
+        const calculatedTotalPages = Math.ceil(response.data.total / ITEMS_PER_PAGE);
+        setTotalPages(calculatedTotalPages);
+        console.log('Total pages:', calculatedTotalPages); // Debug log
       } catch (error) {
         console.error("Error fetching farmers:", error);
         setError("Failed to fetch farmers data");
@@ -91,8 +97,13 @@ const Farmers = () => {
   };
 
   const handleNextPage = () => {
+    console.log('Current page before next:', currentPage); // Debug log
+    console.log('Total pages:', totalPages); // Debug log
     if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage(prev => {
+        console.log('Setting page to:', prev + 1); // Debug log
+        return prev + 1;
+      });
     }
   };
 
@@ -179,7 +190,7 @@ const Farmers = () => {
               Page {currentPage} of {totalPages}
             </span>
             <button
-              disabled={currentPage === totalPages}
+              disabled={currentPage >= totalPages}
               onClick={handleNextPage}
               className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >

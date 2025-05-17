@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axiosInstance from '../utils/axios';
+import axios from 'axios';
 
 type FarmerKycProps = {
   applicationId?: string;
@@ -12,12 +13,30 @@ type Activity = {
   secondary_activity?: any;
 };
 
+interface SignedUrlResponse {
+  filename: string;
+  signed_url: string;
+}
+
 const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [financialYear, setFinancialYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  const getSignedUrl = async (filename: string) => {
+    try {
+      const response = await axios.get<SignedUrlResponse>(
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      );
+      return response.data.signed_url;
+    } catch (error) {
+      console.error('Error fetching signed URL:', error);
+      return null;
+    }
+  };
 
   const fetchActivity = async (selectedYear: string) => {
     if (!applicationId) return;
@@ -25,12 +44,56 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       setLoading(true);
       setErrorMsg('');
       setActivity(null);
+      setSignedUrls({});
 
       const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
       
       if (!data || Object.keys(data).length === 0) {
         setErrorMsg('No activity data available for selected financial year.');
       } else {
+        // Fetch signed URLs for all images
+        const urlPromises = new Map();
+
+        // Primary activity images
+        if (data.primary_activity?.images?.[0]) {
+          data.primary_activity.images[0].forEach((filename: string) => {
+            urlPromises.set(filename, getSignedUrl(filename));
+          });
+        }
+
+        // Secondary activity images
+        if (data.secondary_activity?.images?.[0]) {
+          data.secondary_activity.images[0].forEach((filename: string) => {
+            urlPromises.set(filename, getSignedUrl(filename));
+          });
+        }
+
+        // Facility GPS images
+        if (data.primary_activity?.facility_gps_image) {
+          urlPromises.set(
+            data.primary_activity.facility_gps_image,
+            getSignedUrl(data.primary_activity.facility_gps_image)
+          );
+        }
+        if (data.secondary_activity?.facility_gps_image) {
+          urlPromises.set(
+            data.secondary_activity.facility_gps_image,
+            getSignedUrl(data.secondary_activity.facility_gps_image)
+          );
+        }
+
+        // Wait for all signed URLs to be fetched
+        const urlResults = await Promise.all(urlPromises.values());
+        const newSignedUrls: Record<string, string> = {};
+        let i = 0;
+        urlPromises.forEach((_, key) => {
+          if (urlResults[i]) {
+            newSignedUrls[key] = urlResults[i];
+          }
+          i++;
+        });
+
+        setSignedUrls(newSignedUrls);
         setActivity(data);
       }
     } catch (error) {
@@ -53,11 +116,11 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       <div className="my-6">
         <h3 className="text-lg font-semibold mb-3">{title}:</h3>
         <div className="flex flex-wrap gap-4">
-          {images.map((img, idx) => (
+          {images.map((filename, idx) => (
             <img
               key={idx}
-              src={img}
-              alt="Farm"
+              src={signedUrls[filename] || ''}
+              alt={`${title} ${idx + 1}`}
               className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
             />
           ))}
@@ -102,12 +165,16 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       </div>
 
       {renderSeasons(data.seasons)}
-      {renderImages(data.images, "Farm Images")}
+      {renderImages(data.images?.[0] || [], "Farm Images")}
 
       {data.field_gps_image && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3">Field GPS Image:</h3>
-          <img src={data.field_gps_image} alt="Field GPS" className="w-64 h-64 object-cover rounded-md shadow" />
+          <img 
+            src={signedUrls[data.field_gps_image] || ''} 
+            alt="Field GPS" 
+            className="w-64 h-64 object-cover rounded-md shadow" 
+          />
         </div>
       )}
     </div>
@@ -134,12 +201,16 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
         </div>
       )}
 
-      {renderImages(data.images, "Dairy Facility Images")}
+      {renderImages(data.images?.[0] || [], "Dairy Facility Images")}
 
       {data.facility_gps_image && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
-          <img src={data.facility_gps_image} alt="Facility GPS" className="w-64 h-64 object-cover rounded-md shadow" />
+          <img 
+            src={signedUrls[data.facility_gps_image] || ''} 
+            alt="Facility GPS" 
+            className="w-64 h-64 object-cover rounded-md shadow" 
+          />
         </div>
       )}
     </div>
