@@ -20,10 +20,18 @@ const FarmerApplication: React.FC = () => {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
+        const token = localStorage.getItem("keycloak-token")
+
         setLoading(true);
         const response = await axios.get(
           `https://dev-api.farmeasytechnologies.com/api/applications/${farmerId}`
+          ,{
+            headers: {
+              Authorization: `Bearer ${token}` // Assuming 'token' holds your bearer token
+            }
+          }
         );
+        
         setApplications(response.data || []);
       } catch (err) {
         setError('Failed to fetch applications.');
