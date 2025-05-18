@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axiosInstance from '../utils/axios';
 import axios from 'axios';
-import { FaCalendarAlt, FaLeaf, FaTractor, FaWater, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCalendarAlt, FaLeaf, FaTractor, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 
 type FarmerKycProps = {
   applicationId?: string;
@@ -163,9 +163,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       return null;
     }
 
-    // Add debug logging to help identify data issues
-    console.log(`Rendering ${type} activity:`, data);
-
     const getActivityColor = (activityType: string) => {
       switch (activityType.toLowerCase()) {
         case 'farming':
@@ -173,18 +170,126 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
         case 'dairy':
           return 'from-blue-500 to-blue-600';
         case 'poultry':
+        case 'duckery':
           return 'from-yellow-500 to-yellow-600';
         case 'fishery':
           return 'from-cyan-500 to-cyan-600';
         case 'goat':
           return 'from-purple-500 to-purple-600';
+        case 'mushroom':
+          return 'from-pink-500 to-pink-600';
+        case 'piggery':
+          return 'from-red-500 to-red-600';
+        case 'plantation':
+          return 'from-emerald-500 to-emerald-600';
         default:
           return 'from-gray-500 to-gray-600';
       }
     };
 
+    const renderFields = () => {
+      switch (type.toLowerCase()) {
+        case 'farming':
+          return (
+            <>
+              <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
+              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
+              <p><span className="font-semibold">Irrigation Types:</span> {data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
+              <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
+              <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured ? 'Yes' : 'No'}</p>
+              <p><span className="font-semibold">Post Harvest Storage:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+              {data.seasons && renderSeasons(data.seasons)}
+            </>
+          );
+
+        case 'dairy':
+          return (
+            <>
+              <p><span className="font-semibold">No. of Cows:</span> {data.no_of_livestock_cow || 0}</p>
+              <p><span className="font-semibold">No. of Bulls:</span> {data.no_of_livestock_bull || 0}</p>
+              <p><span className="font-semibold">No. of Calves:</span> {data.no_of_livestock_calves || 0}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Facility Dimensions:</span> {data.livestock_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        case 'poultry':
+        case 'duckery':
+          return (
+            <>
+              <p><span className="font-semibold">Hens:</span> {data.no_of_hen || 0}</p>
+              <p><span className="font-semibold">Cocks:</span> {data.no_of_cock || 0}</p>
+              <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Facility Dimension:</span> {data.coop_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        case 'plantation':
+          return (
+            <>
+              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
+              <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured ? 'Yes' : 'No'}</p>
+              <p><span className="font-semibold">Post Harvest Facility:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+              <p><span className="font-semibold">Irrigations:</span> {data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
+              <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
+            </>
+          );
+
+        case 'goat':
+          return (
+            <>
+              <p><span className="font-semibold">Male Goats:</span> {data.no_of_male_goat || 0}</p>
+              <p><span className="font-semibold">Female Goats:</span> {data.no_of_female_goat || 0}</p>
+              <p><span className="font-semibold">Lambs:</span> {data.no_of_lambs || 0}</p>
+              <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        case 'mushroom':
+          return (
+            <>
+              <p><span className="font-semibold">No. of Cylinders:</span> {data.no_of_cylinders || 0}</p>
+              <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        case 'fishery':
+          return (
+            <>
+              <p><span className="font-semibold">No. of Fish:</span> {data.no_of_fish_owned || 0}</p>
+              <p><span className="font-semibold">Pond Capacity:</span> {data.pond_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Pond Facility Dimension:</span> {data.pond_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        case 'piggery':
+          return (
+            <>
+              <p><span className="font-semibold">No. of Pigs:</span> {data.no_of_pig_owned || 0}</p>
+              <p><span className="font-semibold">Breeder Pig Available:</span> {data.is_breeder_pig_available ? 'Yes' : 'No'}</p>
+              <p><span className="font-semibold">Pen Capacity:</span> {data.pen_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Facility Dimension:</span> {data.pen_facility_dimension || 'N/A'}</p>
+            </>
+          );
+
+        default:
+          return <p className="text-gray-500">No detailed view available for {type}</p>;
+      }
+    };
+
     return (
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
         <div className={`bg-gradient-to-r ${getActivityColor(type)} px-6 py-4`}>
           <div className="flex items-center gap-3">
             <FaLeaf className="h-6 w-6 text-white" />
@@ -193,90 +298,27 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
         </div>
         
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Common fields for all activity types */}
-            {data.land_owned && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FaTractor className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-gray-500">Land Owned</p>
-                    <p className="text-lg font-medium">{data.land_owned} {data.area_unit}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {data.cultivation_area && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FaLeaf className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-gray-500">Cultivation Area</p>
-                    <p className="text-lg font-medium">{data.cultivation_area} {data.area_unit}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {data.irrigations && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FaWater className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-500">Irrigation Types</p>
-                    <p className="text-lg font-medium">{data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Activity-specific fields */}
-            {type.toLowerCase() === 'dairy' && (
-              <>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <p className="text-sm text-gray-500">Number of Cows</p>
-                      <p className="text-lg font-medium">{data.no_of_livestock_cow || 0}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <p className="text-sm text-gray-500">Number of Bulls</p>
-                      <p className="text-lg font-medium">{data.no_of_livestock_bull || 0}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <p className="text-sm text-gray-500">Number of Calves</p>
-                      <p className="text-lg font-medium">{data.no_of_livestock_calves || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Add more activity-specific fields here */}
+          <div className="space-y-3 text-gray-700 text-lg leading-relaxed">
+            {renderFields()}
           </div>
 
-          {data.seasons && renderSeasons(data.seasons)}
-          {data.images && renderImages(data.images[0] || [], `${type} Images`)}
+          {data.facilities?.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Facilities:</h3>
+              <p>{data.facilities.map((f: any) => f.facility_name).join(', ')}</p>
+            </div>
+          )}
 
-          {data.field_gps_image && (
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Field GPS Location</h3>
-              <div className="aspect-square max-w-md rounded-xl overflow-hidden border border-gray-200">
-                <img 
-                  src={signedUrls[data.field_gps_image] || ''} 
-                  alt="Field GPS" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
+          {renderImages(data.images, `${type} Images`)}
+
+          {data.facility_gps_image && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
+              <img
+                src={signedUrls[data.facility_gps_image] || ''}
+                alt="Facility GPS"
+                className="w-64 h-64 object-cover rounded-md shadow"
+              />
             </div>
           )}
         </div>
