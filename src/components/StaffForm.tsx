@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaUserTie, FaCalendarAlt } from 'react-icons/fa';
 
 interface StaffFormData {
@@ -211,7 +211,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               type="radio"
               value="active"
               checked={formData.status === 'active'}
-              onChange={(e) => setFormData({ ...formData, status: 'active' })}
+              onChange={() => setFormData({ ...formData, status: 'active' })}
               className="form-radio h-4 w-4 text-green-600 focus:ring-green-500"
             />
             <span className="ml-2 text-gray-700">Active</span>
@@ -221,7 +221,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               type="radio"
               value="inactive"
               checked={formData.status === 'inactive'}
-              onChange={(e) => setFormData({ ...formData, status: 'inactive' })}
+              onChange={() => setFormData({ ...formData, status: 'inactive' })}
               className="form-radio h-4 w-4 text-red-600 focus:ring-red-500"
             />
             <span className="ml-2 text-gray-700">Inactive</span>

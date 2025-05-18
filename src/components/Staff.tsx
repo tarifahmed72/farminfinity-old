@@ -9,10 +9,8 @@ import {
   FaEdit,
   FaTrash,
   FaPlus,
-  FaCheck,
   FaTimes,
-  FaSearch,
-  FaFilter
+  FaSearch
 } from 'react-icons/fa';
 import StaffForm from './StaffForm';
 
