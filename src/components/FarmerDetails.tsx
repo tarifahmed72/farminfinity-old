@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
-import axios from 'axios';
 import FarmerKyc from "./FarmerKyc";
 import ScoreCard from "./Scorecard";
 import ReportRemark from './ReportRemark';
@@ -116,23 +115,34 @@ const FarmerDetails: React.FC = () => {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
-  const token = localStorage.getItem('keycloak-token');
+  const token = localStorage.getItem('token');
 
   const getImageUrl = (imagePath: string | null | undefined): string => {
     if (!imagePath) return '';
+    
+    // Log for debugging
+    console.log('Image Path:', imagePath);
+    console.log('Token:', token);
+    
     // First check if we have a signed URL
     if (signedUrls[imagePath]) {
+      console.log('Using signed URL:', signedUrls[imagePath]);
       return signedUrls[imagePath];
     }
+    
     // Fallback to token-based URL
-    return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+    const url = `${baseUrl}${imagePath}?token=${token}`;
+    console.log('Using token-based URL:', url);
+    return url;
   };
 
   const getSignedUrl = async (filename: string) => {
     try {
-      const response = await axios.get<SignedUrlResponse>(
-        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      console.log('Fetching signed URL for:', filename);
+      const response = await axiosInstance.get<SignedUrlResponse>(
+        `/gcs-get-signed-image-url/${filename}`
       );
+      console.log('Signed URL response:', response.data);
       return response.data.signed_url;
     } catch (error) {
       console.error('Error fetching signed URL:', error);
@@ -532,275 +542,215 @@ const FarmerDetails: React.FC = () => {
                   </div>
                 )}
 
-                {/* POI Section */}
-                {poi && (
-                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
-                      <h3 className="text-lg font-semibold text-white flex items-center">
-                        <FaIdCard className="mr-2" />
-                        Proof of Identity (POI)
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { label: "Document Type", value: poi.poi_type },
-                          { label: "Document Number", value: poi.poi_number },
-                          { label: "Name", value: poi.name },
-                          { label: "Date of Birth", value: poi.dob },
-                          { label: "Father's Name", value: poi.father },
-                          { label: "Gender", value: poi.gender },
-                          { label: "Mother's Name", value: poi.mother },
-                          { label: "Year of Birth", value: poi.yob },
-                          { label: "PIN", value: poi.pin },
-                          { label: "City", value: poi.city },
-                          { label: "District", value: poi.district },
-                          { label: "State", value: poi.state }
-                        ].map(({ label, value }) => (
-                          <div key={label} className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">{label}</p>
-                            <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
+                {/* Documents Section */}
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center">
+                      <FaIdCard className="mr-2" />
+                      Documents
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    {/* POI Documents */}
+                    {poi && (
+                      <div className="mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-medium text-gray-900 flex items-center">
+                            <span className="bg-purple-100 text-purple-600 p-2 rounded-lg mr-2">
+                              <FaIdCard className="h-5 w-5" />
+                            </span>
+                            Proof of Identity (POI)
+                          </h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            poi.is_verified 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {poi.is_verified ? '✓ Verified' : '⚠ Pending'}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">Document Type</p>
+                            <p className="mt-1 text-base text-gray-900">{poi.poi_type || 'N/A'}</p>
                           </div>
-                        ))}
-                      </div>
-
-                      {/* Full Address */}
-                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm font-medium text-gray-500">Full Address</p>
-                        <p className="mt-1 text-sm text-gray-900">{poi.address_full || 'N/A'}</p>
-                      </div>
-
-                      {/* Verification Status */}
-                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Verification Status</p>
-                            <div className="mt-1 flex items-center">
-                              {poi.is_verified ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  ✓ Verified
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  ⚠ Not Verified
-                                </span>
-                              )}
-                              {poi.verification_id && (
-                                <span className="ml-2 text-sm text-gray-500">
-                                  ID: {poi.verification_id}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">Last Updated</p>
-                            <p className="mt-1 text-sm text-gray-900">
-                              {poi.updated_at ? new Date(poi.updated_at).toLocaleDateString('en-US', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              }) : 'N/A'}
-                            </p>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">Document Number</p>
+                            <p className="mt-1 text-base text-gray-900">{poi.poi_number || 'N/A'}</p>
                           </div>
                         </div>
-                      </div>
 
-                      {/* POI Images */}
-                      {(poi.poi_image_front_url || poi.poi_image_back_url) && (
-                        <div className="mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 mb-4">Document Images</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {poi.poi_image_front_url && (
-                              <div className="relative group">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {poi.poi_image_front_url && (
+                            <div className="relative group">
+                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={getImageUrl(poi.poi_image_front_url)}
                                   alt="POI Front"
-                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
                                   onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                  onError={(e) => {
+                                    console.error('Error loading POI front image');
+                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                                  }}
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
-                                    <p className="text-lg font-semibold">Front Side</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_front_url));
-                                        alert('Image URL copied to clipboard!');
-                                      }}
-                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      Copy URL
-                                    </button>
-                                  </div>
-                                </div>
                               </div>
-                            )}
-                            {poi.poi_image_back_url && (
-                              <div className="relative group">
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900">Front Side</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = getImageUrl(poi.poi_image_front_url);
+                                    navigator.clipboard.writeText(url);
+                                    alert('Image URL copied to clipboard!');
+                                  }}
+                                  className="text-sm text-purple-600 hover:text-purple-800"
+                                >
+                                  Copy URL
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {poi.poi_image_back_url && (
+                            <div className="relative group">
+                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={getImageUrl(poi.poi_image_back_url)}
                                   alt="POI Back"
-                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
                                   onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
+                                  onError={(e) => {
+                                    console.error('Error loading POI back image');
+                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                                  }}
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
-                                    <p className="text-lg font-semibold">Back Side</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_back_url));
-                                        alert('Image URL copied to clipboard!');
-                                      }}
-                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      Copy URL
-                                    </button>
-                                  </div>
-                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* POA Section */}
-                {poa && (
-                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
-                      <h3 className="text-lg font-semibold text-white flex items-center">
-                        <FaIdCard className="mr-2" />
-                        Proof of Address (POA)
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { label: "Document Type", value: poa.poa_type },
-                          { label: "Document Number", value: poa.poa_number },
-                          { label: "Name", value: poa.name },
-                          { label: "Date of Birth", value: poa.dob },
-                          { label: "Father's Name", value: poa.father },
-                          { label: "Gender", value: poa.gender },
-                          { label: "Mother's Name", value: poa.mother },
-                          { label: "Year of Birth", value: poa.yob },
-                          { label: "PIN", value: poa.pin },
-                          { label: "City", value: poa.city },
-                          { label: "District", value: poa.district },
-                          { label: "State", value: poa.state }
-                        ].map(({ label, value }) => (
-                          <div key={label} className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">{label}</p>
-                            <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Full Address */}
-                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm font-medium text-gray-500">Full Address</p>
-                        <p className="mt-1 text-sm text-gray-900">{poa.address_full || 'N/A'}</p>
-                      </div>
-
-                      {/* Verification Status */}
-                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Verification Status</p>
-                            <div className="mt-1 flex items-center">
-                              {poa.is_verified ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  ✓ Verified
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  ⚠ Not Verified
-                                </span>
-                              )}
-                              {poa.verification_id && (
-                                <span className="ml-2 text-sm text-gray-500">
-                                  ID: {poa.verification_id}
-                                </span>
-                              )}
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900">Back Side</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = getImageUrl(poi.poi_image_back_url);
+                                    navigator.clipboard.writeText(url);
+                                    alert('Image URL copied to clipboard!');
+                                  }}
+                                  className="text-sm text-purple-600 hover:text-purple-800"
+                                >
+                                  Copy URL
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">Last Updated</p>
-                            <p className="mt-1 text-sm text-gray-900">
-                              {poa.updated_at ? new Date(poa.updated_at).toLocaleDateString('en-US', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              }) : 'N/A'}
-                            </p>
-                          </div>
+                          )}
                         </div>
                       </div>
+                    )}
 
-                      {/* POA Images */}
-                      {(poa.poa_image_front_url || poa.poa_image_back_url) && (
-                        <div className="mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 mb-4">Document Images</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {poa.poa_image_front_url && (
-                              <div className="relative group">
+                    {/* POA Documents */}
+                    {poa && (
+                      <div className="pt-8 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-medium text-gray-900 flex items-center">
+                            <span className="bg-green-100 text-green-600 p-2 rounded-lg mr-2">
+                              <FaIdCard className="h-5 w-5" />
+                            </span>
+                            Proof of Address (POA)
+                          </h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            poa.is_verified 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {poa.is_verified ? '✓ Verified' : '⚠ Pending'}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">Document Type</p>
+                            <p className="mt-1 text-base text-gray-900">{poa.poa_type || 'N/A'}</p>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">Document Number</p>
+                            <p className="mt-1 text-base text-gray-900">{poa.poa_number || 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {poa.poa_image_front_url && (
+                            <div className="relative group">
+                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={getImageUrl(poa.poa_image_front_url)}
                                   alt="POA Front"
-                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
                                   onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
+                                  onError={(e) => {
+                                    console.error('Error loading POA front image');
+                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                                  }}
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
-                                    <p className="text-lg font-semibold">Front Side</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(getImageUrl(poa.poa_image_front_url));
-                                        alert('Image URL copied to clipboard!');
-                                      }}
-                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      Copy URL
-                                    </button>
-                                  </div>
-                                </div>
                               </div>
-                            )}
-                            {poa.poa_image_back_url && (
-                              <div className="relative group">
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900">Front Side</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = getImageUrl(poa.poa_image_front_url);
+                                    navigator.clipboard.writeText(url);
+                                    alert('Image URL copied to clipboard!');
+                                  }}
+                                  className="text-sm text-green-600 hover:text-green-800"
+                                >
+                                  Copy URL
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {poa.poa_image_back_url && (
+                            <div className="relative group">
+                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={getImageUrl(poa.poa_image_back_url)}
                                   alt="POA Back"
-                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
                                   onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
+                                  onError={(e) => {
+                                    console.error('Error loading POA back image');
+                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                                  }}
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
-                                    <p className="text-lg font-semibold">Back Side</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(getImageUrl(poa.poa_image_back_url));
-                                        alert('Image URL copied to clipboard!');
-                                      }}
-                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      Copy URL
-                                    </button>
-                                  </div>
-                                </div>
                               </div>
-                            )}
-                          </div>
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900">Back Side</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = getImageUrl(poa.poa_image_back_url);
+                                    navigator.clipboard.writeText(url);
+                                    alert('Image URL copied to clipboard!');
+                                  }}
+                                  className="text-sm text-green-600 hover:text-green-800"
+                                >
+                                  Copy URL
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {!poi && !poa && (
+                      <div className="text-center py-12">
+                        <div className="bg-gray-50 rounded-lg p-6 inline-block">
+                          <FaIdCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500">No documents available</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
 
