@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaUsers, FaUserSecret, FaTachometerAlt, FaSignOutAlt, FaChartLine } from "react-icons/fa";
+import { FaUsers, FaUserSecret, FaTachometerAlt, FaSignOutAlt } from "react-icons/fa";
 import { RiBankFill, RiOrganizationChart } from "react-icons/ri";
 import { HiMenu, HiX } from "react-icons/hi";
 import { Link, useLocation, useNavigate } from "react-router-dom";
