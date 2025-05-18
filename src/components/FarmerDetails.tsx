@@ -101,6 +101,127 @@ interface POAData {
   updated_at?: string | null;
 }
 
+const DocumentCard = ({ 
+  title, 
+  type, 
+  number, 
+  frontImage, 
+  backImage, 
+  isVerified, 
+  getImageUrlSafe,
+  onImageClick
+}: {
+  title: string;
+  type: string;
+  number: string;
+  frontImage?: string | null;
+  backImage?: string | null;
+  isVerified?: boolean;
+  getImageUrlSafe: (url: string | null | undefined) => string;
+  onImageClick: (url: string) => void;
+}) => (
+  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-white/10 rounded-lg">
+          <FaIdCard className="text-white text-xl" />
+        </div>
+        <h3 className="text-lg font-semibold text-white">{title}</h3>
+      </div>
+      {isVerified !== undefined && (
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+          isVerified 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {isVerified ? '✓ Verified' : '⚠ Pending'}
+        </span>
+      )}
+    </div>
+    <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm font-medium text-gray-500">Document Type</p>
+          <p className="mt-1 text-base text-gray-900">{type}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm font-medium text-gray-500">Document Number</p>
+          <p className="mt-1 text-base text-gray-900">{number}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {frontImage && (
+          <div className="relative group">
+            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
+              <img
+                src={getImageUrlSafe(frontImage)}
+                alt={`${title} Front`}
+                className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105 cursor-pointer"
+                onClick={() => onImageClick(getImageUrlSafe(frontImage))}
+                onError={(e) => {
+                  console.error(`Error loading ${title} front image`);
+                  e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                }}
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                <span className="text-white text-sm font-medium">Click to view</span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Front Side</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = getImageUrlSafe(frontImage);
+                  navigator.clipboard.writeText(url);
+                  alert('Image URL copied to clipboard!');
+                }}
+                className="text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                Copy URL
+              </button>
+            </div>
+          </div>
+        )}
+        {backImage && (
+          <div className="relative group">
+            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
+              <img
+                src={getImageUrlSafe(backImage)}
+                alt={`${title} Back`}
+                className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105 cursor-pointer"
+                onClick={() => onImageClick(getImageUrlSafe(backImage))}
+                onError={(e) => {
+                  console.error(`Error loading ${title} back image`);
+                  e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                }}
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                <span className="text-white text-sm font-medium">Click to view</span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Back Side</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = getImageUrlSafe(backImage);
+                  navigator.clipboard.writeText(url);
+                  alert('Image URL copied to clipboard!');
+                }}
+                className="text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                Copy URL
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
 const FarmerDetails: React.FC = () => {
   const { farmerId, applicationId } = useParams<{ farmerId: string; applicationId: string }>();
   const navigate = useNavigate();
@@ -550,195 +671,33 @@ const FarmerDetails: React.FC = () => {
                       Documents
                     </h3>
                   </div>
-                  <div className="p-6">
-                    {/* POI Documents */}
+                  <div className="p-6 space-y-6">
+                    {/* POI Document */}
                     {poi && (
-                      <div className="mb-8">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                            <span className="bg-purple-100 text-purple-600 p-2 rounded-lg mr-2">
-                              <FaIdCard className="h-5 w-5" />
-                            </span>
-                            Proof of Identity (POI)
-                          </h4>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            poi.is_verified 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {poi.is_verified ? '✓ Verified' : '⚠ Pending'}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">Document Type</p>
-                            <p className="mt-1 text-base text-gray-900">{poi.poi_type || 'N/A'}</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">Document Number</p>
-                            <p className="mt-1 text-base text-gray-900">{poi.poi_number || 'N/A'}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {poi.poi_image_front_url && (
-                            <div className="relative group">
-                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={getImageUrl(poi.poi_image_front_url)}
-                                  alt="POI Front"
-                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
-                                  onError={(e) => {
-                                    console.error('Error loading POI front image');
-                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                                  }}
-                                />
-                              </div>
-                              <div className="mt-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900">Front Side</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = getImageUrl(poi.poi_image_front_url);
-                                    navigator.clipboard.writeText(url);
-                                    alert('Image URL copied to clipboard!');
-                                  }}
-                                  className="text-sm text-purple-600 hover:text-purple-800"
-                                >
-                                  Copy URL
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {poi.poi_image_back_url && (
-                            <div className="relative group">
-                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={getImageUrl(poi.poi_image_back_url)}
-                                  alt="POI Back"
-                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
-                                  onError={(e) => {
-                                    console.error('Error loading POI back image');
-                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                                  }}
-                                />
-                              </div>
-                              <div className="mt-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900">Back Side</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = getImageUrl(poi.poi_image_back_url);
-                                    navigator.clipboard.writeText(url);
-                                    alert('Image URL copied to clipboard!');
-                                  }}
-                                  className="text-sm text-purple-600 hover:text-purple-800"
-                                >
-                                  Copy URL
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <DocumentCard
+                        title="Proof of Identity (POI)"
+                        type={poi.poi_type || 'N/A'}
+                        number={poi.poi_number || 'N/A'}
+                        frontImage={poi.poi_image_front_url}
+                        backImage={poi.poi_image_back_url}
+                        isVerified={poi.is_verified ?? undefined}
+                        getImageUrlSafe={getImageUrl}
+                        onImageClick={setSelectedImage}
+                      />
                     )}
 
-                    {/* POA Documents */}
+                    {/* POA Document */}
                     {poa && (
-                      <div className="pt-8 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                            <span className="bg-green-100 text-green-600 p-2 rounded-lg mr-2">
-                              <FaIdCard className="h-5 w-5" />
-                            </span>
-                            Proof of Address (POA)
-                          </h4>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            poa.is_verified 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {poa.is_verified ? '✓ Verified' : '⚠ Pending'}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">Document Type</p>
-                            <p className="mt-1 text-base text-gray-900">{poa.poa_type || 'N/A'}</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm font-medium text-gray-500">Document Number</p>
-                            <p className="mt-1 text-base text-gray-900">{poa.poa_number || 'N/A'}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {poa.poa_image_front_url && (
-                            <div className="relative group">
-                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={getImageUrl(poa.poa_image_front_url)}
-                                  alt="POA Front"
-                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
-                                  onError={(e) => {
-                                    console.error('Error loading POA front image');
-                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                                  }}
-                                />
-                              </div>
-                              <div className="mt-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900">Front Side</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = getImageUrl(poa.poa_image_front_url);
-                                    navigator.clipboard.writeText(url);
-                                    alert('Image URL copied to clipboard!');
-                                  }}
-                                  className="text-sm text-green-600 hover:text-green-800"
-                                >
-                                  Copy URL
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {poa.poa_image_back_url && (
-                            <div className="relative group">
-                              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={getImageUrl(poa.poa_image_back_url)}
-                                  alt="POA Back"
-                                  className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
-                                  onError={(e) => {
-                                    console.error('Error loading POA back image');
-                                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                                  }}
-                                />
-                              </div>
-                              <div className="mt-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900">Back Side</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = getImageUrl(poa.poa_image_back_url);
-                                    navigator.clipboard.writeText(url);
-                                    alert('Image URL copied to clipboard!');
-                                  }}
-                                  className="text-sm text-green-600 hover:text-green-800"
-                                >
-                                  Copy URL
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <DocumentCard
+                        title="Proof of Address (POA)"
+                        type={poa.poa_type || 'N/A'}
+                        number={poa.poa_number || 'N/A'}
+                        frontImage={poa.poa_image_front_url}
+                        backImage={poa.poa_image_back_url}
+                        isVerified={poa.is_verified ?? undefined}
+                        getImageUrlSafe={getImageUrl}
+                        onImageClick={setSelectedImage}
+                      />
                     )}
 
                     {!poi && !poa && (
