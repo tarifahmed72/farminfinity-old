@@ -289,31 +289,55 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
 
     const { primary_activity_type, primary_activity, secondary_activity_type, secondary_activity } = activity;
 
-    // Early return if no activity data is available for the selected tab
-    if (activeTab === 'primary' && !primary_activity) {
-      return (
-        <div className="bg-gray-50 rounded-xl p-8 text-center">
-          <FaExclamationTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No primary activity data available.</p>
-        </div>
-      );
-    }
-
-    if (activeTab === 'secondary' && (!secondary_activity || !secondary_activity_type)) {
-      return (
-        <div className="bg-gray-50 rounded-xl p-8 text-center">
-          <FaExclamationTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No secondary activity available.</p>
-        </div>
-      );
-    }
-
-    // Return the appropriate activity details based on the active tab
+    // Show only Farming activities in primary tab
     if (activeTab === 'primary') {
-      return renderActivityDetails(primary_activity, primary_activity_type);
-    } else {
-      return renderActivityDetails(secondary_activity, secondary_activity_type || '');
+      if (primary_activity_type.toLowerCase() === 'farming') {
+        return renderActivityDetails(primary_activity, primary_activity_type);
+      } else if (secondary_activity_type?.toLowerCase() === 'farming') {
+        return renderActivityDetails(secondary_activity, secondary_activity_type);
+      } else {
+        return (
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <p className="text-gray-500">No farming activities found.</p>
+          </div>
+        );
+      }
     }
+
+    // Show all non-farming activities in secondary tab
+    if (activeTab === 'secondary') {
+      const nonFarmingActivities = [];
+      
+      if (primary_activity_type.toLowerCase() !== 'farming') {
+        nonFarmingActivities.push({
+          type: primary_activity_type,
+          data: primary_activity
+        });
+      }
+      
+      if (secondary_activity_type && secondary_activity_type.toLowerCase() !== 'farming') {
+        nonFarmingActivities.push({
+          type: secondary_activity_type,
+          data: secondary_activity
+        });
+      }
+
+      return nonFarmingActivities.length > 0 ? (
+        <div className="space-y-8">
+          {nonFarmingActivities.map((activity, index) => (
+            <div key={index}>
+              {renderActivityDetails(activity.data, activity.type)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <p className="text-gray-500">No other activities found.</p>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -338,51 +362,72 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     <div className="space-y-8">
       {/* Year Selection */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Financial Year</label>
-        <select
-          value={financialYear}
-          onChange={handleYearChange}
-          className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-        >
-          <option value="">-- Select Year --</option>
-          <option value="2024-25">2024-25</option>
-          <option value="2023-24">2023-24</option>
-          <option value="2022-23">2022-23</option>
-        </select>
+        <section className="mb-8">
+          <label className="block mb-3 font-semibold text-lg">Select Financial Year:</label>
+          <select
+            className="border p-3 rounded-md w-72 shadow-sm focus:ring-2 focus:ring-green-400"
+            value={financialYear}
+            onChange={handleYearChange}
+          >
+            <option value="">-- Select Year --</option>
+            <option value="2024-25">2024-25</option>
+            <option value="2023-24">2023-24</option>
+            <option value="2022-23">2022-23</option>
+          </select>
+        </section>
+
+        <section>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+              <span className="ml-3 text-lg text-gray-600">Loading activity data...</span>
+            </div>
+          ) : errorMsg ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">{errorMsg}</p>
+            </div>
+          ) : activity ? (
+            <>
+              {/* Tabs */}
+              <div className="flex gap-6 mb-8">
+                <button
+                  className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
+                    activeTab === 'primary'
+                      ? 'bg-green-500 text-white shadow-green-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                  onClick={() => setActiveTab('primary')}
+                >
+                  <div className="flex items-center gap-2">
+                    <FaLeaf className="h-4 w-4" />
+                    <span>Farming Activities</span>
+                  </div>
+                </button>
+                <button
+                  className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
+                    activeTab === 'secondary'
+                      ? 'bg-blue-500 text-white shadow-blue-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                  onClick={() => setActiveTab('secondary')}
+                >
+                  <div className="flex items-center gap-2">
+                    <FaTractor className="h-4 w-4" />
+                    <span>Other Activities</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Activity Section */}
+              {renderActivitySection()}
+            </>
+          ) : (
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <p className="text-gray-500">Please select a financial year to view activity data.</p>
+            </div>
+          )}
+        </section>
       </div>
-
-      {activity && (
-        <div className="space-y-6">
-          {/* Activity Type Tabs */}
-          <div className="flex gap-4">
-            <button
-              onClick={() => setActiveTab('primary')}
-              className={`px-6 py-2 rounded-full font-medium transition-all ${
-                activeTab === 'primary'
-                  ? 'bg-green-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Primary Activity
-            </button>
-            {activity.secondary_activity_type && (
-              <button
-                onClick={() => setActiveTab('secondary')}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  activeTab === 'secondary'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Secondary Activity
-              </button>
-            )}
-          </div>
-
-          {/* Activity Details */}
-          {renderActivitySection()}
-        </div>
-      )}
     </div>
   );
 };
