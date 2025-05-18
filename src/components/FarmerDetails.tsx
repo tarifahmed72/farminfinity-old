@@ -152,6 +152,22 @@ const FarmerDetails: React.FC = () => {
     }
   };
 
+  const loadProfilePhotoUrl = async (photoUrl: string | null | undefined) => {
+    if (!photoUrl || signedUrls[photoUrl]) return;
+    
+    try {
+      const signedUrl = await getSignedUrl(photoUrl);
+      if (signedUrl) {
+        setSignedUrls(prev => ({
+          ...prev,
+          [photoUrl]: signedUrl
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading profile photo signed URL:', error);
+    }
+  };
+
   const loadSignedUrls = async (poiData: POIData | null, poaData: POAData | null) => {
     const urlPromises = new Map();
 
@@ -250,6 +266,12 @@ const FarmerDetails: React.FC = () => {
     fetchFarmerData();
   }, [farmerId, applicationId]);
 
+  useEffect(() => {
+    if (bio?.photo) {
+      loadProfilePhotoUrl(bio.photo);
+    }
+  }, [bio?.photo]);
+
   const handleTabClick = (
     tab: 'profile' | 'kyc' | 'activities' | 'scorecard'
   ) => {
@@ -331,10 +353,10 @@ const FarmerDetails: React.FC = () => {
                 <div className="flex items-center space-x-4">
                   {bio?.photo ? (
                     <img
-                      src={getImageUrl(bio.photo)}
+                      src={bio.photo ? (signedUrls[bio.photo] || getImageUrl(bio.photo)) : ''}
                       alt={bio.name}
                       className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-                      onClick={() => setSelectedImage(getImageUrl(bio.photo))}
+                      onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo] || getImageUrl(bio.photo))}
                     />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-white/20 flex items-center justify-center">
@@ -480,10 +502,10 @@ const FarmerDetails: React.FC = () => {
                     </div>
                     <div className="ml-14">
                       <img
-                        src={getImageUrl(bio.photo)}
+                        src={bio.photo ? (signedUrls[bio.photo] || getImageUrl(bio.photo)) : ''}
                         alt="Farmer"
                         className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
-                        onClick={() => setSelectedImage(getImageUrl(bio.photo))}
+                        onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo] || getImageUrl(bio.photo))}
                       />
                     </div>
                   </div>
