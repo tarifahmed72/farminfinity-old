@@ -4,6 +4,7 @@ import axiosInstance from '../utils/axios';
 import FarmerKyc from "./FarmerKyc";
 import ScoreCard from "./Scorecard";
 import ReportRemark from './ReportRemark';
+import FamilyMembers from './FamilyMembers';
 import { 
   FaUser, 
   FaIdCard, 
@@ -510,6 +511,9 @@ const FarmerDetails: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Family Members Section */}
+                <FamilyMembers bioId={bio.id || ''} />
               </div>
             )}
 
