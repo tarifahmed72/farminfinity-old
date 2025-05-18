@@ -28,6 +28,16 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
   const [editText, setEditText] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
 
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+
+  // Configure headers with token
+  const getHeaders = () => ({
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
   // Fetch remarks
   useEffect(() => {
     const fetchRemarks = async () => {
@@ -37,10 +47,16 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
         
         // If applicationId is provided, use the new endpoint
         if (applicationId) {
-          response = await axiosInstance.get(`/report-remarks/${applicationId}/${financialYear}?skip=0&limit=10`);
+          response = await axiosInstance.get(
+            `/report-remarks/${applicationId}/${financialYear}?skip=0&limit=10`,
+            getHeaders()
+          );
         } else {
           // Fallback to farmer ID based endpoint if needed
-          response = await axiosInstance.get(`/report-remark/${farmerId}`);
+          response = await axiosInstance.get(
+            `/report-remark/${farmerId}`,
+            getHeaders()
+          );
         }
         
         setRemarks(response.data);
@@ -51,12 +67,16 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
       }
     };
 
-    fetchRemarks();
-  }, [farmerId, applicationId, financialYear]);
+    if (token) {
+      fetchRemarks();
+    } else {
+      setError('Authentication token not found');
+    }
+  }, [farmerId, applicationId, financialYear, token]);
 
   // Add new remark
   const handleAddRemark = async () => {
-    if (!newRemark.trim()) return;
+    if (!newRemark.trim() || !token) return;
 
     try {
       const response = await axiosInstance.post('/report-remark', {
@@ -64,7 +84,7 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
         application_id: applicationId,
         financial_year: financialYear,
         remark: newRemark
-      });
+      }, getHeaders());
 
       setRemarks([...remarks, response.data]);
       setNewRemark('');
@@ -76,14 +96,14 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
 
   // Update remark
   const handleUpdateRemark = async (id: string) => {
-    if (!editText.trim()) return;
+    if (!editText.trim() || !token) return;
 
     try {
       const response = await axiosInstance.put(`/report-remark/${id}`, {
         remark: editText,
         application_id: applicationId,
         financial_year: financialYear
-      });
+      }, getHeaders());
 
       setRemarks(remarks.map(r => r.id === id ? response.data : r));
       setEditingId(null);
@@ -95,15 +115,23 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
 
   // Delete remark
   const handleDeleteRemark = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this remark?')) return;
+    if (!window.confirm('Are you sure you want to delete this remark?') || !token) return;
 
     try {
-      await axiosInstance.delete(`/report-remark/${id}`);
+      await axiosInstance.delete(`/report-remark/${id}`, getHeaders());
       setRemarks(remarks.filter(r => r.id !== id));
     } catch (err: any) {
       setError(err.message || 'Failed to delete remark');
     }
   };
+
+  if (!token) {
+    return (
+      <div className="p-4 text-red-600">
+        Error: Authentication token not found. Please log in again.
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="p-4">Loading remarks...</div>;
