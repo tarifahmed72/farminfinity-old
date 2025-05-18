@@ -93,7 +93,19 @@ const Farmers = () => {
         // Update state with new data and pagination info
         setFarmers(fetchedFarmers);
         setTotalItems(response.data.total);
-        setTotalPages(response.data.total_pages);
+        
+        // Calculate total pages if not provided by API
+        const calculatedTotalPages = Math.ceil(response.data.total / ITEMS_PER_PAGE);
+        setTotalPages(calculatedTotalPages);
+
+        // Log pagination info for debugging
+        console.log('Pagination Info:', {
+          currentPage,
+          totalPages: calculatedTotalPages,
+          totalItems: response.data.total,
+          itemsPerPage: ITEMS_PER_PAGE,
+          fetchedItems: fetchedFarmers.length
+        });
 
         // Clear error if successful
         setError(null);
@@ -106,12 +118,7 @@ const Farmers = () => {
       }
     };
 
-    // Debounce the API call for search
-    const timeoutId = setTimeout(() => {
-      fetchFarmers();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    fetchFarmers();
   }, [currentPage, searchQuery, selectedStatus]);
 
   const getStatusColor = (status: number) => {
@@ -379,7 +386,11 @@ const Farmers = () => {
                 <button
                   onClick={handleNextPage}
                   disabled={currentPage >= totalPages || loading}
-                  className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  className={`flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium ${
+                    currentPage >= totalPages || loading
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-gray-50 cursor-pointer'
+                  } transition-colors`}
                 >
                   Next
                   <FaChevronRight className="h-4 w-4" />
