@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AxiosResponse } from 'axios';
 import axiosInstance from '../utils/axios';
-import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaFileAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt, FaIdCard, FaFileContract } from 'react-icons/fa';
+import axios from 'axios';
+import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaFileAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
 
 interface FPOData {
   id: string;
@@ -33,6 +34,11 @@ interface FPOData {
   updated_at: string;
 }
 
+interface SignedUrlResponse {
+  filename: string;
+  signed_url: string;
+}
+
 const FPO = () => {
   const [fpos, setFpos] = useState<FPOData[]>([]);
   const [selectedFPO, setSelectedFPO] = useState<FPOData | null>(null);
@@ -41,6 +47,41 @@ const FPO = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedState, setSelectedState] = useState('all');
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  const getSignedUrl = async (filename: string) => {
+    if (!filename) return null;
+    try {
+      const response = await axios.get<SignedUrlResponse>(
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      );
+      return response.data.signed_url;
+    } catch (error) {
+      console.error('Error fetching signed URL:', error);
+      return null;
+    }
+  };
+
+  const loadSignedUrls = async (images: string[]) => {
+    const urlPromises = new Map();
+    images.forEach(filename => {
+      if (filename) {
+        urlPromises.set(filename, getSignedUrl(filename));
+      }
+    });
+
+    const urlResults = await Promise.all(urlPromises.values());
+    const newSignedUrls: Record<string, string> = {};
+    let i = 0;
+    urlPromises.forEach((_, key) => {
+      if (urlResults[i]) {
+        newSignedUrls[key] = urlResults[i];
+      }
+      i++;
+    });
+
+    setSignedUrls(prev => ({ ...prev, ...newSignedUrls }));
+  };
 
   useEffect(() => {
     const fetchFPOs = async () => {
@@ -49,6 +90,16 @@ const FPO = () => {
           '/fpos/?skip=0&limit=100'
         );
         setFpos(response.data);
+
+        // Load signed URLs for all FPO images
+        const allImages = response.data.flatMap(fpo => [
+          fpo.pan_image,
+          fpo.incorporation_doc_img,
+          fpo.registration_no_img,
+          fpo.director_shareholder_list_image
+        ].filter(Boolean) as string[]);
+
+        await loadSignedUrls(allImages);
       } catch (err: any) {
         setError(`Error fetching FPO list: ${err.message}`);
       } finally {
@@ -74,6 +125,26 @@ const FPO = () => {
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const renderImages = (images: string[], title: string) => {
+    if (!images?.length) return null;
+    return (
+      <div className="my-6">
+        <h3 className="text-lg font-semibold mb-3">{title}:</h3>
+        <div className="flex flex-wrap gap-4">
+          {images.map((filename, idx) => (
+            <img
+              key={idx}
+              src={signedUrls[filename] || ''}
+              alt={`${title} ${idx + 1}`}
+              className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
+              loading="lazy"
+            />
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -366,66 +437,13 @@ const FPO = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Documents</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {selectedFPO.pan_image && (
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <FaIdCard className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-900">PAN Card</p>
-                        <a
-                          href={selectedFPO.pan_image}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    )}
-                    {selectedFPO.incorporation_doc_img && (
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <FaFileContract className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-900">Incorporation</p>
-                        <a
-                          href={selectedFPO.incorporation_doc_img}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    )}
-                    {selectedFPO.registration_no_img && (
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <FaFileAlt className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-900">Registration</p>
-                        <a
-                          href={selectedFPO.registration_no_img}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    )}
-                    {selectedFPO.director_shareholder_list_image && (
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <FaUsers className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-900">Shareholders</p>
-                        <a
-                          href={selectedFPO.director_shareholder_list_image}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    )}
-                  </div>
+                <div className="mt-6 space-y-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Documents</h3>
+                  
+                  {renderImages([selectedFPO.pan_image].filter(Boolean), "PAN Documents")}
+                  {renderImages([selectedFPO.incorporation_doc_img].filter(Boolean), "Incorporation Documents")}
+                  {renderImages([selectedFPO.registration_no_img].filter(Boolean), "Registration Documents")}
+                  {renderImages([selectedFPO.director_shareholder_list_image].filter(Boolean), "Director/Shareholder List")}
                 </div>
               </div>
             </div>
