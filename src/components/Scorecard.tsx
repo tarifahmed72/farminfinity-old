@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import axiosInstance from '../utils/axios';
 
 type propsType = {
   farmerId: String | undefined;
@@ -17,21 +18,21 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
       try {
         setLoading(true);
         setError("");
-        const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/credit-report?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
+        const url = `/credit-report?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
         const token = localStorage.getItem('token');
 
-        const response = await fetch(url, {
+        const response = await axiosInstance.get(url, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'text/html'
           }
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch scorecard: ${response.statusText}`);
+        if (!response.data) {
+          throw new Error('No data received from the server');
         }
 
-        const text = await response.text();
-        setHtmlContent(text);
+        setHtmlContent(response.data);
       } catch (err) {
         console.error("Failed to fetch Score Card:", err);
         setError(err instanceof Error ? err.message : "Failed to load Score Card");
