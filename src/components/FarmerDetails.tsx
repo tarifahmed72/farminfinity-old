@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
+import axios from 'axios';
 import FarmerKyc from "./FarmerKyc";
 import ScoreCard from "./Scorecard";
 import ReportRemark from './ReportRemark';
@@ -48,6 +49,11 @@ interface KYCData {
   remarks?: string | null;
 }
 
+interface SignedUrlResponse {
+  filename: string;
+  signed_url: string;
+}
+
 interface POIData {
   id?: string;
   poi_type?: string | null;
@@ -61,40 +67,22 @@ interface POIData {
   yob?: number | null;
   address_full?: string | null;
   pin?: string | null;
-  building?: string | null;
   city?: string | null;
   district?: string | null;
-  floor?: string | null;
-  house?: string | null;
-  locality?: string | null;
   state?: string | null;
-  street?: string | null;
-  complex?: string | null;
-  landmark?: string | null;
   relation?: string | null;
-  number_cs?: number | null;
-  name_cs?: number | null;
-  dob_cs?: number | null;
-  father_cs?: number | null;
-  gender_cs?: number | null;
-  husband_cs?: number | null;
-  mother_cs?: number | null;
-  yob_cs?: number | null;
-  address_cs?: string | null;
-  pin_cs?: string | null;
   poi_image_front_url?: string | null;
   poi_image_back_url?: string | null;
   is_verified?: boolean | null;
   verification_id?: string | null;
-  created_at?: string | null;
   updated_at?: string | null;
 }
 
 interface POAData {
   id?: string;
   poa_type?: string | null;
-  name?: string | null;
   poa_number?: string | null;
+  name?: string | null;
   dob?: string | null;
   father?: string | null;
   gender?: string | null;
@@ -103,32 +91,14 @@ interface POAData {
   yob?: number | null;
   address_full?: string | null;
   pin?: string | null;
-  building?: string | null;
   city?: string | null;
   district?: string | null;
-  floor?: string | null;
-  house?: string | null;
-  locality?: string | null;
   state?: string | null;
-  street?: string | null;
-  complex?: string | null;
-  landmark?: string | null;
   relation?: string | null;
-  number_cs?: number | null;
-  name_cs?: number | null;
-  dob_cs?: number | null;
-  father_cs?: number | null;
-  gender_cs?: number | null;
-  husband_cs?: number | null;
-  mother_cs?: number | null;
-  yob_cs?: number | null;
-  address_cs?: string | null;
-  pin_cs?: string | null;
   poa_image_front_url?: string | null;
   poa_image_back_url?: string | null;
   is_verified?: boolean | null;
   verification_id?: string | null;
-  created_at?: string | null;
   updated_at?: string | null;
 }
 
@@ -143,15 +113,71 @@ const FarmerDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard'>('profile');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const imageBaseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
-  // Get token from localStorage
+  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
   const token = localStorage.getItem('keycloak-token');
 
-  // Function to get image URL with token
   const getImageUrl = (imagePath: string | null | undefined): string => {
     if (!imagePath) return '';
-    return `${imageBaseUrl}${imagePath}?token=Bearer ${token}`;
+    // First check if we have a signed URL
+    if (signedUrls[imagePath]) {
+      return signedUrls[imagePath];
+    }
+    // Fallback to token-based URL
+    return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+  };
+
+  const getSignedUrl = async (filename: string) => {
+    try {
+      const response = await axios.get<SignedUrlResponse>(
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      );
+      return response.data.signed_url;
+    } catch (error) {
+      console.error('Error fetching signed URL:', error);
+      return null;
+    }
+  };
+
+  const loadSignedUrls = async (poiData: POIData | null, poaData: POAData | null) => {
+    const urlPromises = new Map();
+
+    // Helper function to add image to promises
+    const addImageToPromises = (image: string | null | undefined) => {
+      if (image && !signedUrls[image]) {
+        urlPromises.set(image, getSignedUrl(image));
+      }
+    };
+
+    // Add POI images
+    if (poiData) {
+      addImageToPromises(poiData.poi_image_front_url);
+      addImageToPromises(poiData.poi_image_back_url);
+    }
+
+    // Add POA images
+    if (poaData) {
+      addImageToPromises(poaData.poa_image_front_url);
+      addImageToPromises(poaData.poa_image_back_url);
+    }
+
+    if (urlPromises.size > 0) {
+      try {
+        const urlResults = await Promise.all(urlPromises.values());
+        const newSignedUrls: Record<string, string> = { ...signedUrls };
+        let i = 0;
+        urlPromises.forEach((_, key) => {
+          if (urlResults[i]) {
+            newSignedUrls[key] = urlResults[i];
+          }
+          i++;
+        });
+        setSignedUrls(newSignedUrls);
+      } catch (error) {
+        console.error('Error loading signed URLs:', error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -169,43 +195,41 @@ const FarmerDetails: React.FC = () => {
 
         if (bioHistoryResponse.data && bioHistoryResponse.data.length > 0) {
           const bio_version_id = bioHistoryResponse.data[0].bio_version_id;
-          const bioResponse = await axiosInstance.get<Bio>(
-            `/bio/${bio_version_id}`
-          );
+          const bioResponse = await axiosInstance.get(`/bio/${bio_version_id}`);
           setBio(bioResponse.data);
-        } else {
-          console.log("No bio history found for this application.");
-          setBio({});
         }
 
         // Fetch KYC
-        const kycResponse = await axiosInstance.get(
-          `/kyc-histories/${farmerId}`
-        );
+        const kycResponse = await axiosInstance.get(`/kyc-histories/${farmerId}`);
+        setKyc(kycResponse.data[0]);
 
-        if (kycResponse.data && kycResponse.data.length > 0) {
-          const kycData = kycResponse.data[0];
-          setKyc(kycData);
+        let poiData = null;
+        let poaData = null;
 
-          // Fetch POI
-          if (kycData.poi_version_id) {
-            const poiResponse = await axiosInstance.get<POIData>(
-              `/poi/${kycData.poi_version_id}`
-            );
-            setPoi(poiResponse.data);
-          }
-
-          // Fetch POA
-          if (kycData.poa_version_id) {
-            const poaResponse = await axiosInstance.get<POAData>(
-              `/poa/${kycData.poa_version_id}`
-            );
-            setPoa(poaResponse.data);
-          }
+        // Fetch POI
+        if (kycResponse.data[0].poi_version_id) {
+          const poiResponse = await axiosInstance.get(
+            `/poi/${kycResponse.data[0].poi_version_id}`
+          );
+          poiData = poiResponse.data;
+          setPoi(poiData);
         }
+
+        // Fetch POA
+        if (kycResponse.data[0].poa_version_id) {
+          const poaResponse = await axiosInstance.get(
+            `/poa/${kycResponse.data[0].poa_version_id}`
+          );
+          poaData = poaResponse.data;
+          setPoa(poaData);
+        }
+
+        // Load signed URLs for POI and POA images
+        await loadSignedUrls(poiData, poaData);
+
       } catch (err: any) {
-        setError("Failed to fetch data: " + err.message);
-        console.error("Fetch error:", err);
+        setError('Failed to fetch data: ' + err.message);
+        console.error('Fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -226,6 +250,48 @@ const FarmerDetails: React.FC = () => {
     localStorage.removeItem('user');
     // Redirect to login page
     navigate('/login');
+  };
+
+  const renderDocumentImage = (
+    imageUrl: string | null | undefined,
+    title: string,
+    color: string
+  ) => {
+    if (!imageUrl) return null;
+
+    return (
+      <div className="bg-gray-50 rounded-lg p-4">
+        <p className="text-sm font-medium text-gray-500 mb-2">{title}</p>
+        <div className="relative group cursor-pointer">
+          <img
+            src={getImageUrl(imageUrl)}
+            alt={title}
+            className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
+            onClick={() => setSelectedImage(getImageUrl(imageUrl))}
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+            <div className="flex flex-col items-center space-y-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(getImageUrl(imageUrl));
+                  alert('Image URL copied to clipboard!');
+                }}
+                className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
+              >
+                Copy URL
+              </button>
+              <button
+                onClick={() => setSelectedImage(getImageUrl(imageUrl))}
+                className={`bg-${color}-500 text-white px-4 py-2 rounded-md hover:bg-${color}-600 transition-colors duration-200`}
+              >
+                View Image
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -532,17 +598,13 @@ const FarmerDetails: React.FC = () => {
                           { label: "City", value: poi.city, icon: FaMapMarkerAlt },
                           { label: "District", value: poi.district, icon: FaMapMarkerAlt },
                           { label: "State", value: poi.state, icon: FaMapMarkerAlt },
-                        ].map(({ label, value, icon: Icon }) => (
-                          <div key={label} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                <Icon className="h-5 w-5 text-purple-600" />
-                              </div>
-                              <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">{label}</p>
-                                <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
-                              </div>
+                        ].map(({ label, value, icon: Icon }, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex items-center gap-2">
+                              <Icon className="text-purple-500" />
+                              <span className="text-sm text-gray-500">{label}</span>
                             </div>
+                            <p className="mt-1 text-gray-900 font-medium">{value || 'N/A'}</p>
                           </div>
                         ))}
                       </div>
@@ -588,87 +650,15 @@ const FarmerDetails: React.FC = () => {
                       </div>
 
                       {/* POI Images */}
-                      {poi.poi_image_front_url && (
+                      {(poi.poi_image_front_url || poi.poi_image_back_url) && (
                         <div className="mt-6">
                           <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                             <FaIdCard className="mr-2 text-purple-600" />
                             Document Images
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <p className="text-sm font-medium text-gray-500 mb-2">Front Side</p>
-                              <div className="relative group cursor-pointer">
-                                <img
-                                  src={getImageUrl(poi.poi_image_front_url)}
-                                  alt="POI Front"
-                                  className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="flex flex-col items-center space-y-2">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_front_url));
-                                        alert('Image URL copied to clipboard!');
-                                      }}
-                                      className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      Copy URL
-                                    </button>
-                                    <button
-                                      onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
-                                      className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors duration-200"
-                                    >
-                                      View Image
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
-                                <p className="text-xs text-gray-500 break-all">
-                                  URL: {getImageUrl(poi.poi_image_front_url)}
-                                </p>
-                              </div>
-                            </div>
-                            {poi.poi_image_back_url && (
-                              <div className="bg-gray-50 rounded-lg p-4">
-                                <p className="text-sm font-medium text-gray-500 mb-2">Back Side</p>
-                                <div className="relative group cursor-pointer">
-                                  <img
-                                    src={getImageUrl(poi.poi_image_back_url)}
-                                    alt="POI Back"
-                                    className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                    <div className="flex flex-col items-center space-y-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(getImageUrl(poi.poi_image_back_url));
-                                          alert('Image URL copied to clipboard!');
-                                        }}
-                                        className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                      >
-                                        Copy URL
-                                      </button>
-                                      <button
-                                        onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
-                                        className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors duration-200"
-                                      >
-                                        View Image
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
-                                  <p className="text-xs text-gray-500 break-all">
-                                    URL: {getImageUrl(poi.poi_image_back_url)}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
+                            {renderDocumentImage(poi.poi_image_front_url, "Front Side", "purple")}
+                            {renderDocumentImage(poi.poi_image_back_url, "Back Side", "purple")}
                           </div>
                         </div>
                       )}
@@ -700,17 +690,13 @@ const FarmerDetails: React.FC = () => {
                           { label: "City", value: poa.city, icon: FaMapMarkerAlt },
                           { label: "District", value: poa.district, icon: FaMapMarkerAlt },
                           { label: "State", value: poa.state, icon: FaMapMarkerAlt },
-                        ].map(({ label, value, icon: Icon }) => (
-                          <div key={label} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                <Icon className="h-5 w-5 text-green-600" />
-                              </div>
-                              <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">{label}</p>
-                                <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
-                              </div>
+                        ].map(({ label, value, icon: Icon }, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex items-center gap-2">
+                              <Icon className="text-green-500" />
+                              <span className="text-sm text-gray-500">{label}</span>
                             </div>
+                            <p className="mt-1 text-gray-900 font-medium">{value || 'N/A'}</p>
                           </div>
                         ))}
                       </div>
@@ -763,82 +749,8 @@ const FarmerDetails: React.FC = () => {
                             Document Images
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {poa.poa_image_front_url && (
-                              <div className="bg-gray-50 rounded-lg p-4">
-                                <p className="text-sm font-medium text-gray-500 mb-2">Front Side</p>
-                                <div className="relative group cursor-pointer">
-                                  <img
-                                    src={getImageUrl(poa.poa_image_front_url)}
-                                    alt="POA Front"
-                                    className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                    <div className="flex flex-col items-center space-y-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(getImageUrl(poa.poa_image_front_url));
-                                          alert('Image URL copied to clipboard!');
-                                        }}
-                                        className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                      >
-                                        Copy URL
-                                      </button>
-                                      <button
-                                        onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
-                                        className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors duration-200"
-                                      >
-                                        View Image
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
-                                  <p className="text-xs text-gray-500 break-all">
-                                    URL: {getImageUrl(poa.poa_image_front_url)}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                            {poa.poa_image_back_url && (
-                              <div className="bg-gray-50 rounded-lg p-4">
-                                <p className="text-sm font-medium text-gray-500 mb-2">Back Side</p>
-                                <div className="relative group cursor-pointer">
-                                  <img
-                                    src={getImageUrl(poa.poa_image_back_url)}
-                                    alt="POA Back"
-                                    className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                    <div className="flex flex-col items-center space-y-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(getImageUrl(poa.poa_image_back_url));
-                                          alert('Image URL copied to clipboard!');
-                                        }}
-                                        className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                      >
-                                        Copy URL
-                                      </button>
-                                      <button
-                                        onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
-                                        className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors duration-200"
-                                      >
-                                        View Image
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
-                                  <p className="text-xs text-gray-500 break-all">
-                                    URL: {getImageUrl(poa.poa_image_back_url)}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
+                            {renderDocumentImage(poa.poa_image_front_url, "Front Side", "green")}
+                            {renderDocumentImage(poa.poa_image_back_url, "Back Side", "green")}
                           </div>
                         </div>
                       )}
