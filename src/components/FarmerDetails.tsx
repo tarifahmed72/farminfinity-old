@@ -18,7 +18,9 @@ import {
   FaCalendarAlt,
   FaVenusMars,
   FaIdBadge,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaSearch,
+  FaHome
 } from 'react-icons/fa';
 
 interface Bio {
@@ -100,127 +102,6 @@ interface POAData {
   verification_id?: string | null;
   updated_at?: string | null;
 }
-
-const DocumentCard = ({ 
-  title, 
-  type, 
-  number, 
-  frontImage, 
-  backImage, 
-  isVerified, 
-  getImageUrlSafe,
-  onImageClick
-}: {
-  title: string;
-  type: string;
-  number: string;
-  frontImage?: string | null;
-  backImage?: string | null;
-  isVerified?: boolean;
-  getImageUrlSafe: (url: string | null | undefined) => string;
-  onImageClick: (url: string) => void;
-}) => (
-  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-    <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-white/10 rounded-lg">
-          <FaIdCard className="text-white text-xl" />
-        </div>
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
-      </div>
-      {isVerified !== undefined && (
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          isVerified 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {isVerified ? '✓ Verified' : '⚠ Pending'}
-        </span>
-      )}
-    </div>
-    <div className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-sm font-medium text-gray-500">Document Type</p>
-          <p className="mt-1 text-base text-gray-900">{type}</p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-sm font-medium text-gray-500">Document Number</p>
-          <p className="mt-1 text-base text-gray-900">{number}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {frontImage && (
-          <div className="relative group">
-            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-              <img
-                src={getImageUrlSafe(frontImage)}
-                alt={`${title} Front`}
-                className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105 cursor-pointer"
-                onClick={() => onImageClick(getImageUrlSafe(frontImage))}
-                onError={(e) => {
-                  console.error(`Error loading ${title} front image`);
-                  e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                }}
-              />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                <span className="text-white text-sm font-medium">Click to view</span>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Front Side</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const url = getImageUrlSafe(frontImage);
-                  navigator.clipboard.writeText(url);
-                  alert('Image URL copied to clipboard!');
-                }}
-                className="text-sm text-indigo-600 hover:text-indigo-800"
-              >
-                Copy URL
-              </button>
-            </div>
-          </div>
-        )}
-        {backImage && (
-          <div className="relative group">
-            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-              <img
-                src={getImageUrlSafe(backImage)}
-                alt={`${title} Back`}
-                className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105 cursor-pointer"
-                onClick={() => onImageClick(getImageUrlSafe(backImage))}
-                onError={(e) => {
-                  console.error(`Error loading ${title} back image`);
-                  e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                }}
-              />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                <span className="text-white text-sm font-medium">Click to view</span>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Back Side</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const url = getImageUrlSafe(backImage);
-                  navigator.clipboard.writeText(url);
-                  alert('Image URL copied to clipboard!');
-                }}
-                className="text-sm text-indigo-600 hover:text-indigo-800"
-              >
-                Copy URL
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-);
 
 const FarmerDetails: React.FC = () => {
   const { farmerId, applicationId } = useParams<{ farmerId: string; applicationId: string }>();
@@ -421,19 +302,22 @@ const FarmerDetails: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Image Modal */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
           <div className="relative max-w-4xl w-full">
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-0 right-0 -mt-12 text-white hover:text-gray-300 focus:outline-none"
-            >
-              <FaTimes className="h-8 w-8" />
-            </button>
-            <img
-              src={selectedImage}
-              alt="Document"
-              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            <img 
+              src={selectedImage} 
+              alt="Document Preview" 
+              className="w-full h-auto rounded-lg shadow-xl"
             />
+            <button
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-all duration-200"
+              onClick={() => setSelectedImage(null)}
+            >
+              <FaTimes className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}
@@ -674,30 +558,124 @@ const FarmerDetails: React.FC = () => {
                   <div className="p-6 space-y-6">
                     {/* POI Document */}
                     {poi && (
-                      <DocumentCard
-                        title="Proof of Identity (POI)"
-                        type={poi.poi_type || 'N/A'}
-                        number={poi.poi_number || 'N/A'}
-                        frontImage={poi.poi_image_front_url}
-                        backImage={poi.poi_image_back_url}
-                        isVerified={poi.is_verified ?? undefined}
-                        getImageUrlSafe={getImageUrl}
-                        onImageClick={setSelectedImage}
-                      />
+                      <div className="space-y-4">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                          <h4 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <FaIdCard className="mr-2 text-indigo-600" />
+                            Proof of Identity (POI)
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-500">Document Type</p>
+                              <p className="text-base font-medium">{poi.poi_type || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-500">Document Number</p>
+                              <p className="text-base font-medium">{poi.poi_number || 'N/A'}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Front Image */}
+                            {poi.poi_image_front_url && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">Front Side</p>
+                                <div className="relative group">
+                                  <img
+                                    src={getImageUrl(poi.poi_image_front_url)}
+                                    alt="POI Front"
+                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                    <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Back Image */}
+                            {poi.poi_image_back_url && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">Back Side</p>
+                                <div className="relative group">
+                                  <img
+                                    src={getImageUrl(poi.poi_image_back_url)}
+                                    alt="POI Back"
+                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                    <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {/* POA Document */}
                     {poa && (
-                      <DocumentCard
-                        title="Proof of Address (POA)"
-                        type={poa.poa_type || 'N/A'}
-                        number={poa.poa_number || 'N/A'}
-                        frontImage={poa.poa_image_front_url}
-                        backImage={poa.poa_image_back_url}
-                        isVerified={poa.is_verified ?? undefined}
-                        getImageUrlSafe={getImageUrl}
-                        onImageClick={setSelectedImage}
-                      />
+                      <div className="space-y-4">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                          <h4 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <FaHome className="mr-2 text-indigo-600" />
+                            Proof of Address (POA)
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-500">Document Type</p>
+                              <p className="text-base font-medium">{poa.poa_type || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-500">Document Number</p>
+                              <p className="text-base font-medium">{poa.poa_number || 'N/A'}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Front Image */}
+                            {poa.poa_image_front_url && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">Front Side</p>
+                                <div className="relative group">
+                                  <img
+                                    src={getImageUrl(poa.poa_image_front_url)}
+                                    alt="POA Front"
+                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                    <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Back Image */}
+                            {poa.poa_image_back_url && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">Back Side</p>
+                                <div className="relative group">
+                                  <img
+                                    src={getImageUrl(poa.poa_image_back_url)}
+                                    alt="POA Back"
+                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                    <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {!poi && !poa && (
