@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
-import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
-
-interface ReportRemark {
-  id: string;
-  remark: string;
-  created_at: string;
-  updated_at: string;
-}
 
 interface ReportRemarkProps {
   farmerId: string;
@@ -15,137 +8,143 @@ interface ReportRemarkProps {
   financialYear?: string;
 }
 
-const ReportRemark: React.FC<ReportRemarkProps> = ({ 
-  farmerId, 
-  applicationId, 
-  financialYear = "2024-25" // Default financial year
-}) => {
+interface ReportRemark {
+  id: string;
+  farmer_id: string;
+  application_id: string;
+  financial_year: string;
+  remark: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+}
+
+export default function ReportRemark({ farmerId, applicationId, financialYear }: ReportRemarkProps) {
   const [remarks, setRemarks] = useState<ReportRemark[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newRemark, setNewRemark] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  const [error, setError] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
-
-  // Get token from localStorage
-  const token = localStorage.getItem('token');
-
-  // Configure headers with token
-  const getHeaders = () => ({
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedRemark, setSelectedRemark] = useState<ReportRemark | null>(null);
+  const [newRemark, setNewRemark] = useState('');
 
   // Fetch remarks
   useEffect(() => {
-    const fetchRemarks = async () => {
+    async function fetchRemarks() {
+      if (!applicationId || !financialYear) return;
+      
       try {
         setLoading(true);
-        let response;
-        
-        // If applicationId is provided, use the new endpoint
-        if (applicationId) {
-          response = await axiosInstance.get(
-            `/report-remarks/${applicationId}/${financialYear}?skip=0&limit=10`,
-            getHeaders()
-          );
-        } else {
-          // Fallback to farmer ID based endpoint if needed
-          response = await axiosInstance.get(
-            `/report-remark/${farmerId}`,
-            getHeaders()
-          );
-        }
-        
+        const response = await axiosInstance.get('/report-remarks/', {
+          params: {
+            application_id: applicationId,
+            financial_year: financialYear,
+            skip: 0,
+            limit: 10
+          }
+        });
         setRemarks(response.data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch remarks');
+      } catch (err) {
+        console.error('Error fetching remarks:', err);
+        setError('Failed to load remarks');
       } finally {
         setLoading(false);
       }
-    };
-
-    if (token) {
-      fetchRemarks();
-    } else {
-      setError('Authentication token not found');
     }
-  }, [farmerId, applicationId, financialYear, token]);
 
-  // Add new remark
-  const handleAddRemark = async () => {
-    if (!newRemark.trim() || !token) return;
+    fetchRemarks();
+  }, [applicationId, financialYear]);
+
+  // Create new remark
+  const createRemark = async () => {
+    if (!newRemark.trim() || !applicationId || !financialYear) return;
 
     try {
-      const response = await axiosInstance.post('/report-remark', {
+      setLoading(true);
+      await axiosInstance.post('/report-remark/', {
         farmer_id: farmerId,
         application_id: applicationId,
         financial_year: financialYear,
         remark: newRemark
-      }, getHeaders());
+      });
 
-      setRemarks([...remarks, response.data]);
+      // Refresh remarks list
+      const response = await axiosInstance.get('/report-remarks/', {
+        params: {
+          application_id: applicationId,
+          financial_year: financialYear,
+          skip: 0,
+          limit: 10
+        }
+      });
+      setRemarks(response.data);
       setNewRemark('');
       setIsAddingNew(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to add remark');
+    } catch (err) {
+      console.error('Error creating remark:', err);
+      setError('Failed to create remark');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Update remark
-  const handleUpdateRemark = async (id: string) => {
-    if (!editText.trim() || !token) return;
+  const updateRemark = async () => {
+    if (!selectedRemark) return;
 
     try {
-      const response = await axiosInstance.put(`/report-remark/${id}`, {
-        remark: editText,
-        application_id: applicationId,
-        financial_year: financialYear
-      }, getHeaders());
+      setLoading(true);
+      await axiosInstance.patch(`/report-remark/${selectedRemark.id}`, {
+        remark: selectedRemark.remark
+      });
 
-      setRemarks(remarks.map(r => r.id === id ? response.data : r));
-      setEditingId(null);
-      setEditText('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to update remark');
+      // Refresh remarks list
+      const response = await axiosInstance.get('/report-remarks/', {
+        params: {
+          application_id: applicationId,
+          financial_year: financialYear,
+          skip: 0,
+          limit: 10
+        }
+      });
+      setRemarks(response.data);
+      setSelectedRemark(null);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error updating remark:', err);
+      setError('Failed to update remark');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Delete remark
-  const handleDeleteRemark = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this remark?') || !token) return;
-
-    try {
-      await axiosInstance.delete(`/report-remark/${id}`, getHeaders());
-      setRemarks(remarks.filter(r => r.id !== id));
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete remark');
-    }
-  };
-
-  if (!token) {
+  if (loading && !remarks.length) {
     return (
-      <div className="p-4 text-red-600">
-        Error: Authentication token not found. Please log in again.
+      <div className="flex flex-col items-center justify-center h-64">
+        <FaSpinner className="h-8 w-8 animate-spin text-purple-600 mb-4" />
+        <p className="text-gray-600">Loading remarks...</p>
       </div>
     );
   }
 
-  if (loading) {
-    return <div className="p-4">Loading remarks...</div>;
-  }
-
-  if (error) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+  if (error && !remarks.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="bg-red-50 rounded-lg p-6 text-center">
+          <FaExclamationTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
+      <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white flex items-center">
+            <FaComments className="mr-2" />
             Report Remarks
           </h3>
           {!isAddingNew && (
@@ -163,31 +162,27 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
       <div className="p-6">
         {/* Add New Remark Form */}
         {isAddingNew && (
-          <div className="mb-6 bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-4">
-              <input
-                type="text"
-                value={newRemark}
-                onChange={(e) => setNewRemark(e.target.value)}
-                placeholder="Enter your remark..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+          <div className="mb-6 bg-purple-50 rounded-lg p-4">
+            <textarea
+              value={newRemark}
+              onChange={(e) => setNewRemark(e.target.value)}
+              className="w-full p-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Enter your remark..."
+              rows={4}
+            />
+            <div className="mt-4 flex justify-end space-x-3">
               <button
-                onClick={handleAddRemark}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors duration-200"
+                onClick={() => setIsAddingNew(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
               >
-                <FaSave className="inline-block mr-2" />
-                Save
+                Cancel
               </button>
               <button
-                onClick={() => {
-                  setIsAddingNew(false);
-                  setNewRemark('');
-                }}
-                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200"
+                onClick={createRemark}
+                disabled={!newRemark.trim()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FaTimes className="inline-block mr-2" />
-                Cancel
+                Add Remark
               </button>
             </div>
           </div>
@@ -195,77 +190,75 @@ const ReportRemark: React.FC<ReportRemarkProps> = ({
 
         {/* Remarks List */}
         <div className="space-y-4">
-          {remarks.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No remarks found</p>
-          ) : (
-            remarks.map((remark) => (
-              <div key={remark.id} className="bg-gray-50 rounded-lg p-4">
-                {editingId === remark.id ? (
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="text"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <button
-                      onClick={() => handleUpdateRemark(remark.id)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors duration-200"
-                    >
-                      <FaSave className="inline-block mr-2" />
-                      Save
-                    </button>
+          {remarks.map((remark) => (
+            <div
+              key={remark.id}
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+            >
+              {isEditing && selectedRemark?.id === remark.id ? (
+                <div>
+                  <textarea
+                    value={selectedRemark.remark}
+                    onChange={(e) => setSelectedRemark({ ...selectedRemark, remark: e.target.value })}
+                    className="w-full p-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    rows={4}
+                  />
+                  <div className="mt-4 flex justify-end space-x-3">
                     <button
                       onClick={() => {
-                        setEditingId(null);
-                        setEditText('');
+                        setIsEditing(false);
+                        setSelectedRemark(null);
                       }}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200"
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
                     >
-                      <FaTimes className="inline-block mr-2" />
                       Cancel
                     </button>
+                    <button
+                      onClick={updateRemark}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200"
+                    >
+                      Save Changes
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-800">{remark.remark}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {new Date(remark.created_at).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-gray-500">
+                      {new Date(remark.created_at).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <div className="flex space-x-2">
                       <button
                         onClick={() => {
-                          setEditingId(remark.id);
-                          setEditText(remark.remark);
+                          setSelectedRemark(remark);
+                          setIsEditing(true);
                         }}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors duration-200"
+                        className="p-1 text-gray-500 hover:text-purple-600 transition-colors duration-200"
                       >
-                        <FaEdit />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRemark(remark.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors duration-200"
-                      >
-                        <FaTrash />
+                        <FaEdit className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                )}
+                  <p className="text-gray-700 whitespace-pre-wrap">{remark.remark}</p>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {!remarks.length && !loading && (
+            <div className="text-center py-12">
+              <div className="bg-gray-50 rounded-lg p-6 inline-block">
+                <FaComments className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No remarks available</p>
               </div>
-            ))
+            </div>
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default ReportRemark; 
+} 
