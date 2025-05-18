@@ -151,7 +151,7 @@ const FarmerDetails: React.FC = () => {
   // Function to get image URL with token
   const getImageUrl = (imagePath: string | null | undefined): string => {
     if (!imagePath) return '';
-    return `${imageBaseUrl}${imagePath}?token=${token}`;
+    return `${imageBaseUrl}${imagePath}?token=Bearer ${token}`;
   };
 
   useEffect(() => {

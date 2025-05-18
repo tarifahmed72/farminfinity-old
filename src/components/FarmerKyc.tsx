@@ -26,7 +26,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
 
   const getImageUrl = (imagePath: string): string => {
     if (!imagePath) return '';
-    return `${baseUrl}${imagePath}?token=${token}`;
+    return `${baseUrl}${imagePath}?token=Bearer ${token}`;
   };
 
   const fetchActivity = async (selectedYear: string) => {
