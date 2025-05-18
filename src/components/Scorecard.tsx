@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import { FaSpinner, FaExclamationTriangle, FaFileAlt } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 
 type propsType = {
-  farmerId: String | undefined;
-  applicationId: String | undefined;
-  financialYear: String;
+  farmerId: string | undefined;
+  applicationId: string | undefined;
+  financialYear: string;
 }
 
 export default function ScoreCard({ farmerId, applicationId, financialYear }: propsType) {
@@ -15,12 +15,15 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
 
   useEffect(() => {
     async function fetchScoreCard() {
+      if (!farmerId || !applicationId || !financialYear) {
+        setError("Missing required parameters");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
-        
-        // Use the correct API endpoint path
-        const token = localStorage.getItem('keycloak-token');
         
         const response = await axiosInstance.get(`/credit-report`, {
           params: {
@@ -29,11 +32,9 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
             financialYear
           },
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Accept': 'text/html',
-            'Content-Type': 'text/html'
           },
-          withCredentials: true
+          responseType: 'text'
         });
 
         if (!response.data) {
@@ -49,9 +50,7 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
       }
     }
 
-    if (farmerId && applicationId && financialYear) {
-      fetchScoreCard();
-    }
+    fetchScoreCard();
   }, [farmerId, applicationId, financialYear]);
 
   if (loading) {
@@ -65,9 +64,17 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-red-600">
-        <FaExclamationTriangle className="h-8 w-8 mb-4" />
-        <p className="text-center">{error}</p>
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="bg-red-50 rounded-lg p-6 text-center">
+          <FaExclamationTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 font-medium">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors duration-200"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -75,7 +82,10 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
   if (!htmlContent) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-        <p>No scorecard data available</p>
+        <div className="bg-gray-50 rounded-lg p-6 text-center">
+          <FaFileAlt className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+          <p>No scorecard data available</p>
+        </div>
       </div>
     );
   }
