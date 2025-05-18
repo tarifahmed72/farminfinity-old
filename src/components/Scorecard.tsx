@@ -18,17 +18,20 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
       try {
         setLoading(true);
         setError("");
-        const url = `/credit-report?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
-        const token = localStorage.getItem('token');
-
-        const response = await axiosInstance.get(url, {
+        
+        // Use the correct API endpoint path
+        const token = localStorage.getItem('keycloak-token');
+        
+        const response = await axiosInstance.get(`/credit-report`, {
+          params: {
+            farmerId,
+            applicationId,
+            financialYear
+          },
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'text/html',
-            'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization, X-Request-With'
+            'Content-Type': 'text/html'
           },
           withCredentials: true
         });
