@@ -1,10 +1,134 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
+import FarmerKyc from "./FarmerKyc";
+import ScoreCard from "./Scorecard";
+import { 
+  FaUser, 
+  FaIdCard, 
+  FaChartLine, 
+  FaSpinner, 
+  FaClipboardList, 
+  FaTimes,
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaBuilding,
+  FaCalendarAlt,
+  FaVenusMars,
+  FaIdBadge
+} from 'react-icons/fa';
+import POIImages from "./POIImages";
+
+interface Bio {
+  id?: string;
+  name?: string;
+  dob?: string;
+  email?: string;
+  gender?: string | null;
+  alt_phone?: string | null;
+  full_address?: string | null;
+  village?: string | null;
+  district?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pin?: string | null;
+  fpo_name?: string | null;
+  fpo_code?: string | null;
+  photo?: string | null;
+}
+
+interface KYCData {
+  poi_version_id?: string | null;
+  poa_version_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status?: string | null;
+  remarks?: string | null;
+}
 
 interface POIData {
+  id?: string;
+  poi_type?: string | null;
+  poi_number?: string | null;
+  name?: string | null;
+  dob?: string | null;
+  father?: string | null;
+  gender?: string | null;
+  husband?: string | null;
+  mother?: string | null;
+  yob?: number | null;
+  address_full?: string | null;
+  pin?: string | null;
+  building?: string | null;
+  city?: string | null;
+  district?: string | null;
+  floor?: string | null;
+  house?: string | null;
+  locality?: string | null;
+  state?: string | null;
+  street?: string | null;
+  complex?: string | null;
+  landmark?: string | null;
+  relation?: string | null;
+  number_cs?: number | null;
+  name_cs?: number | null;
+  dob_cs?: number | null;
+  father_cs?: number | null;
+  gender_cs?: number | null;
+  husband_cs?: number | null;
+  mother_cs?: number | null;
+  yob_cs?: number | null;
+  address_cs?: string | null;
+  pin_cs?: string | null;
   poi_image_front_url?: string | null;
   poi_image_back_url?: string | null;
+  is_verified?: boolean | null;
+  verification_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+interface POAData {
+  id?: string;
+  poa_type?: string | null;
+  name?: string | null;
+  poa_number?: string | null;
+  dob?: string | null;
+  father?: string | null;
+  gender?: string | null;
+  husband?: string | null;
+  mother?: string | null;
+  yob?: number | null;
+  address_full?: string | null;
+  pin?: string | null;
+  building?: string | null;
+  city?: string | null;
+  district?: string | null;
+  floor?: string | null;
+  house?: string | null;
+  locality?: string | null;
+  state?: string | null;
+  street?: string | null;
+  complex?: string | null;
+  landmark?: string | null;
+  relation?: string | null;
+  number_cs?: number | null;
+  name_cs?: number | null;
+  dob_cs?: number | null;
+  father_cs?: number | null;
+  gender_cs?: number | null;
+  husband_cs?: number | null;
+  mother_cs?: number | null;
+  yob_cs?: number | null;
+  address_cs?: string | null;
+  pin_cs?: string | null;
+  poa_image_front_url?: string | null;
+  poa_image_back_url?: string | null;
+  is_verified?: boolean | null;
+  verification_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 const FarmerDetails: React.FC = () => {
@@ -96,4 +220,4 @@ const FarmerDetails: React.FC = () => {
   );
 };
 
-export default FarmerDetails; 
+export default FarmerDetails;
