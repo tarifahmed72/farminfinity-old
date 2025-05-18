@@ -24,8 +24,13 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: pr
         const response = await axiosInstance.get(url, {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Accept': 'text/html'
-          }
+            'Accept': 'text/html',
+            'Content-Type': 'text/html',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization, X-Request-With'
+          },
+          withCredentials: true
         });
 
         if (!response.data) {
