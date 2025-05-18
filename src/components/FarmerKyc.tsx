@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import axios from 'axios';
 
 interface FarmerKycProps {
   applicationId: string;
@@ -13,12 +14,18 @@ type Activity = {
   secondary_activity?: any;
 };
 
+interface SignedUrlResponse {
+  filename: string;
+  signed_url: string;
+}
+
 const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [financialYear, setFinancialYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   // Get token from localStorage
   const token = localStorage.getItem('keycloak-token');
@@ -26,7 +33,68 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
 
   const getImageUrl = (imagePath: string): string => {
     if (!imagePath) return '';
+    // First check if we have a signed URL
+    if (signedUrls[imagePath]) {
+      return signedUrls[imagePath];
+    }
+    // Fallback to token-based URL
     return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+  };
+
+  const getSignedUrl = async (filename: string) => {
+    try {
+      const response = await axios.get<SignedUrlResponse>(
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      );
+      return response.data.signed_url;
+    } catch (error) {
+      console.error('Error fetching signed URL:', error);
+      return null;
+    }
+  };
+
+  const loadSignedUrls = async (data: any) => {
+    const urlPromises = new Map();
+
+    // Helper function to add image to promises
+    const addImageToPromises = (image: string) => {
+      if (image && !signedUrls[image]) {
+        urlPromises.set(image, getSignedUrl(image));
+      }
+    };
+
+    // Add primary activity images
+    if (data.primary_activity?.images?.[0]) {
+      data.primary_activity.images[0].forEach(addImageToPromises);
+    }
+    if (data.primary_activity?.facility_gps_image) {
+      addImageToPromises(data.primary_activity.facility_gps_image);
+    }
+
+    // Add secondary activity images
+    if (data.secondary_activity?.images?.[0]) {
+      data.secondary_activity.images[0].forEach(addImageToPromises);
+    }
+    if (data.secondary_activity?.facility_gps_image) {
+      addImageToPromises(data.secondary_activity.facility_gps_image);
+    }
+
+    if (urlPromises.size > 0) {
+      try {
+        const urlResults = await Promise.all(urlPromises.values());
+        const newSignedUrls: Record<string, string> = { ...signedUrls };
+        let i = 0;
+        urlPromises.forEach((_, key) => {
+          if (urlResults[i]) {
+            newSignedUrls[key] = urlResults[i];
+          }
+          i++;
+        });
+        setSignedUrls(newSignedUrls);
+      } catch (error) {
+        console.error('Error loading signed URLs:', error);
+      }
+    }
   };
 
   const fetchActivity = async (selectedYear: string) => {
@@ -35,12 +103,14 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       setLoading(true);
       setErrorMsg('');
       setActivity(null);
+      setSignedUrls({});
 
       const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
       
       if (!data || Object.keys(data).length === 0) {
         setErrorMsg('No activity data available for selected financial year.');
       } else {
+        await loadSignedUrls(data);
         setActivity(data);
       }
     } catch (error) {
@@ -83,25 +153,20 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     );
   };
 
-  const renderImages = (images: string | string[] | undefined, title: string) => {
-    if (!images || (Array.isArray(images) && !images.length)) return null;
-
-    // Convert to array if it's a string
-    const imageArray = typeof images === 'string' ? images.split(',').map(img => img.trim()) : images;
-
+  const renderImages = (images: string[], title: string) => {
+    if (!images?.length) return null;
     return (
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">{title}</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.isArray(imageArray) && imageArray.map((img: string, idx: number) => (
-            <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all">
-              <img
-                src={getImageUrl(img)}
-                alt={`${title} ${idx + 1}`}
-                className="w-full h-full object-cover hover:scale-105 transition-transform"
-                loading="lazy"
-              />
-            </div>
+      <div className="my-6">
+        <h3 className="text-lg font-semibold mb-3">{title}:</h3>
+        <div className="flex flex-wrap gap-4">
+          {images.map((filename, idx) => (
+            <img
+              key={idx}
+              src={getImageUrl(filename)}
+              alt={`${title} ${idx + 1}`}
+              className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
+              loading="lazy"
+            />
           ))}
         </div>
       </div>
@@ -109,12 +174,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   };
 
   const renderActivityDetails = (data: any, type: string) => {
-    if (!data || !type) {
-      console.warn('Missing data or type in renderActivityDetails');
-      return null;
-    }
-
-    const getActivityColor = (activityType: string) => {
+    const getActivityColor = (activityType: string): string => {
       switch (activityType.toLowerCase()) {
         case 'farming':
           return 'from-green-500 to-green-600';
@@ -123,16 +183,14 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
         case 'poultry':
         case 'duckery':
           return 'from-yellow-500 to-yellow-600';
-        case 'fishery':
-          return 'from-cyan-500 to-cyan-600';
         case 'goat':
           return 'from-purple-500 to-purple-600';
         case 'mushroom':
           return 'from-pink-500 to-pink-600';
+        case 'fishery':
+          return 'from-cyan-500 to-cyan-600';
         case 'piggery':
           return 'from-red-500 to-red-600';
-        case 'plantation':
-          return 'from-emerald-500 to-emerald-600';
         default:
           return 'from-gray-500 to-gray-600';
       }
@@ -152,7 +210,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               {data.seasons && renderSeasons(data.seasons)}
             </>
           );
-
         case 'dairy':
           return (
             <>
@@ -163,7 +220,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Facility Dimensions:</span> {data.livestock_facility_dimension || 'N/A'}</p>
             </>
           );
-
         case 'poultry':
         case 'duckery':
           return (
@@ -176,7 +232,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Facility Dimension:</span> {data.coop_facility_dimension || 'N/A'}</p>
             </>
           );
-
         case 'plantation':
           return (
             <>
@@ -187,7 +242,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
             </>
           );
-
         case 'goat':
           return (
             <>
@@ -200,7 +254,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
             </>
           );
-
         case 'mushroom':
           return (
             <>
@@ -210,7 +263,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
             </>
           );
-
         case 'fishery':
           return (
             <>
@@ -221,7 +273,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Pond Facility Dimension:</span> {data.pond_facility_dimension || 'N/A'}</p>
             </>
           );
-
         case 'piggery':
           return (
             <>
@@ -233,7 +284,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p><span className="font-semibold">Facility Dimension:</span> {data.pen_facility_dimension || 'N/A'}</p>
             </>
           );
-
         default:
           return <p className="text-gray-500">No detailed view available for {type}</p>;
       }
@@ -260,6 +310,9 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             </div>
           )}
 
+          {/* Activity Images */}
+          {data.images?.[0] && renderImages(data.images[0], `${type} Images`)}
+
           {/* Facility GPS image */}
           {data.facility_gps_image && (
             <div className="mt-6">
@@ -285,19 +338,9 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     // Show only Farming activities in primary tab
     if (activeTab === 'primary') {
       if (primary_activity_type.toLowerCase() === 'farming') {
-        return (
-          <>
-            {renderActivityDetails(primary_activity, primary_activity_type)}
-            {primary_activity?.images && renderImages(primary_activity.images, `${primary_activity_type} Images`)}
-          </>
-        );
+        return renderActivityDetails(primary_activity, primary_activity_type);
       } else if (secondary_activity_type?.toLowerCase() === 'farming') {
-        return (
-          <>
-            {renderActivityDetails(secondary_activity, secondary_activity_type)}
-            {secondary_activity?.images && renderImages(secondary_activity.images, `${secondary_activity_type} Images`)}
-          </>
-        );
+        return renderActivityDetails(secondary_activity, secondary_activity_type);
       } else {
         return (
           <div className="bg-gray-50 p-6 rounded-lg">
@@ -330,7 +373,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
           {nonFarmingActivities.map((activity, index) => (
             <div key={index}>
               {renderActivityDetails(activity.data, activity.type)}
-              {activity.data?.images && renderImages(activity.data.images, `${activity.type} Images`)}
             </div>
           ))}
         </div>
