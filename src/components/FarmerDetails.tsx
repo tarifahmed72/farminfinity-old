@@ -837,12 +837,16 @@ const FarmerDetails: React.FC = () => {
               <div className="space-y-6">
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
+                  {farmerId && (
+                    <div className="mt-6">
+                      <ReportRemark 
+                        farmerId={farmerId} 
+                        applicationId={applicationId} 
+                        financialYear="2024-25" 
+                      />
+                    </div>
+                  )}
                 </div>
-                {farmerId && <ReportRemark 
-                  farmerId={farmerId} 
-                  applicationId={applicationId} 
-                  financialYear="2024-25" 
-                />}
               </div>
             )}
           </div>
