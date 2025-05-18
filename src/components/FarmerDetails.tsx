@@ -252,48 +252,6 @@ const FarmerDetails: React.FC = () => {
     navigate('/login');
   };
 
-  const renderDocumentImage = (
-    imageUrl: string | null | undefined,
-    title: string,
-    color: string
-  ) => {
-    if (!imageUrl) return null;
-
-    return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm font-medium text-gray-500 mb-2">{title}</p>
-        <div className="relative group cursor-pointer">
-          <img
-            src={getImageUrl(imageUrl)}
-            alt={title}
-            className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-            onClick={() => setSelectedImage(getImageUrl(imageUrl))}
-          />
-          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(getImageUrl(imageUrl));
-                  alert('Image URL copied to clipboard!');
-                }}
-                className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-              >
-                Copy URL
-              </button>
-              <button
-                onClick={() => setSelectedImage(getImageUrl(imageUrl))}
-                className={`bg-${color}-500 text-white px-4 py-2 rounded-md hover:bg-${color}-600 transition-colors duration-200`}
-              >
-                View Image
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -586,54 +544,52 @@ const FarmerDetails: React.FC = () => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[
-                          { label: "Document Type", value: poi.poi_type, icon: FaIdCard },
-                          { label: "Document Number", value: poi.poi_number, icon: FaIdBadge },
-                          { label: "Name", value: poi.name, icon: FaUser },
-                          { label: "Date of Birth", value: poi.dob, icon: FaCalendarAlt },
-                          { label: "Father's Name", value: poi.father, icon: FaUser },
-                          { label: "Gender", value: poi.gender, icon: FaVenusMars },
-                          { label: "Mother's Name", value: poi.mother, icon: FaUser },
-                          { label: "Address", value: poi.address_full, icon: FaMapMarkerAlt },
-                          { label: "PIN", value: poi.pin, icon: FaMapMarkerAlt },
-                          { label: "City", value: poi.city, icon: FaMapMarkerAlt },
-                          { label: "District", value: poi.district, icon: FaMapMarkerAlt },
-                          { label: "State", value: poi.state, icon: FaMapMarkerAlt },
-                        ].map(({ label, value, icon: Icon }, idx) => (
-                          <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center gap-2">
-                              <Icon className="text-purple-500" />
-                              <span className="text-sm text-gray-500">{label}</span>
-                            </div>
-                            <p className="mt-1 text-gray-900 font-medium">{value || 'N/A'}</p>
+                          { label: "Document Type", value: poi.poi_type },
+                          { label: "Document Number", value: poi.poi_number },
+                          { label: "Name", value: poi.name },
+                          { label: "Date of Birth", value: poi.dob },
+                          { label: "Father's Name", value: poi.father },
+                          { label: "Gender", value: poi.gender },
+                          { label: "Mother's Name", value: poi.mother },
+                          { label: "Year of Birth", value: poi.yob },
+                          { label: "PIN", value: poi.pin },
+                          { label: "City", value: poi.city },
+                          { label: "District", value: poi.district },
+                          { label: "State", value: poi.state }
+                        ].map(({ label, value }) => (
+                          <div key={label} className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">{label}</p>
+                            <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
                           </div>
                         ))}
+                      </div>
+
+                      {/* Full Address */}
+                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm font-medium text-gray-500">Full Address</p>
+                        <p className="mt-1 text-sm text-gray-900">{poi.address_full || 'N/A'}</p>
                       </div>
 
                       {/* Verification Status */}
                       <div className="mt-6 bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                              <FaIdCard className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-500">Verification Status</p>
-                              <div className="mt-1 flex items-center">
-                                {poi.is_verified ? (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    ✓ Verified
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    ⚠ Not Verified
-                                  </span>
-                                )}
-                                {poi.verification_id && (
-                                  <span className="ml-2 text-sm text-gray-500">
-                                    ID: {poi.verification_id}
-                                  </span>
-                                )}
-                              </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Verification Status</p>
+                            <div className="mt-1 flex items-center">
+                              {poi.is_verified ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Verified
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  ⚠ Not Verified
+                                </span>
+                              )}
+                              {poi.verification_id && (
+                                <span className="ml-2 text-sm text-gray-500">
+                                  ID: {poi.verification_id}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -652,13 +608,58 @@ const FarmerDetails: React.FC = () => {
                       {/* POI Images */}
                       {(poi.poi_image_front_url || poi.poi_image_back_url) && (
                         <div className="mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <FaIdCard className="mr-2 text-purple-600" />
-                            Document Images
-                          </h4>
+                          <h4 className="text-lg font-medium text-gray-900 mb-4">Document Images</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {renderDocumentImage(poi.poi_image_front_url, "Front Side", "purple")}
-                            {renderDocumentImage(poi.poi_image_back_url, "Back Side", "purple")}
+                            {poi.poi_image_front_url && (
+                              <div className="relative group">
+                                <img
+                                  src={getImageUrl(poi.poi_image_front_url)}
+                                  alt="POI Front"
+                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
+                                    <p className="text-lg font-semibold">Front Side</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_front_url));
+                                        alert('Image URL copied to clipboard!');
+                                      }}
+                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {poi.poi_image_back_url && (
+                              <div className="relative group">
+                                <img
+                                  src={getImageUrl(poi.poi_image_back_url)}
+                                  alt="POI Back"
+                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
+                                    <p className="text-lg font-semibold">Back Side</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_back_url));
+                                        alert('Image URL copied to clipboard!');
+                                      }}
+                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -678,54 +679,52 @@ const FarmerDetails: React.FC = () => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[
-                          { label: "Document Type", value: poa.poa_type, icon: FaIdCard },
-                          { label: "Document Number", value: poa.poa_number, icon: FaIdBadge },
-                          { label: "Name", value: poa.name, icon: FaUser },
-                          { label: "Date of Birth", value: poa.dob, icon: FaCalendarAlt },
-                          { label: "Father's Name", value: poa.father, icon: FaUser },
-                          { label: "Gender", value: poa.gender, icon: FaVenusMars },
-                          { label: "Mother's Name", value: poa.mother, icon: FaUser },
-                          { label: "Address", value: poa.address_full, icon: FaMapMarkerAlt },
-                          { label: "PIN", value: poa.pin, icon: FaMapMarkerAlt },
-                          { label: "City", value: poa.city, icon: FaMapMarkerAlt },
-                          { label: "District", value: poa.district, icon: FaMapMarkerAlt },
-                          { label: "State", value: poa.state, icon: FaMapMarkerAlt },
-                        ].map(({ label, value, icon: Icon }, idx) => (
-                          <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center gap-2">
-                              <Icon className="text-green-500" />
-                              <span className="text-sm text-gray-500">{label}</span>
-                            </div>
-                            <p className="mt-1 text-gray-900 font-medium">{value || 'N/A'}</p>
+                          { label: "Document Type", value: poa.poa_type },
+                          { label: "Document Number", value: poa.poa_number },
+                          { label: "Name", value: poa.name },
+                          { label: "Date of Birth", value: poa.dob },
+                          { label: "Father's Name", value: poa.father },
+                          { label: "Gender", value: poa.gender },
+                          { label: "Mother's Name", value: poa.mother },
+                          { label: "Year of Birth", value: poa.yob },
+                          { label: "PIN", value: poa.pin },
+                          { label: "City", value: poa.city },
+                          { label: "District", value: poa.district },
+                          { label: "State", value: poa.state }
+                        ].map(({ label, value }) => (
+                          <div key={label} className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-500">{label}</p>
+                            <p className="mt-1 text-sm text-gray-900">{value || 'N/A'}</p>
                           </div>
                         ))}
+                      </div>
+
+                      {/* Full Address */}
+                      <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm font-medium text-gray-500">Full Address</p>
+                        <p className="mt-1 text-sm text-gray-900">{poa.address_full || 'N/A'}</p>
                       </div>
 
                       {/* Verification Status */}
                       <div className="mt-6 bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                              <FaIdCard className="h-5 w-5 text-green-600" />
-                            </div>
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-500">Verification Status</p>
-                              <div className="mt-1 flex items-center">
-                                {poa.is_verified ? (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    ✓ Verified
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    ⚠ Not Verified
-                                  </span>
-                                )}
-                                {poa.verification_id && (
-                                  <span className="ml-2 text-sm text-gray-500">
-                                    ID: {poa.verification_id}
-                                  </span>
-                                )}
-                              </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Verification Status</p>
+                            <div className="mt-1 flex items-center">
+                              {poa.is_verified ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Verified
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  ⚠ Not Verified
+                                </span>
+                              )}
+                              {poa.verification_id && (
+                                <span className="ml-2 text-sm text-gray-500">
+                                  ID: {poa.verification_id}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -744,13 +743,58 @@ const FarmerDetails: React.FC = () => {
                       {/* POA Images */}
                       {(poa.poa_image_front_url || poa.poa_image_back_url) && (
                         <div className="mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <FaIdCard className="mr-2 text-green-600" />
-                            Document Images
-                          </h4>
+                          <h4 className="text-lg font-medium text-gray-900 mb-4">Document Images</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {renderDocumentImage(poa.poa_image_front_url, "Front Side", "green")}
-                            {renderDocumentImage(poa.poa_image_back_url, "Back Side", "green")}
+                            {poa.poa_image_front_url && (
+                              <div className="relative group">
+                                <img
+                                  src={getImageUrl(poa.poa_image_front_url)}
+                                  alt="POA Front"
+                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
+                                    <p className="text-lg font-semibold">Front Side</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(getImageUrl(poa.poa_image_front_url));
+                                        alert('Image URL copied to clipboard!');
+                                      }}
+                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {poa.poa_image_back_url && (
+                              <div className="relative group">
+                                <img
+                                  src={getImageUrl(poa.poa_image_back_url)}
+                                  alt="POA Back"
+                                  className="w-full h-64 object-cover rounded-lg shadow-sm cursor-pointer transition-transform duration-200 transform group-hover:scale-[1.02]"
+                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 text-white text-center">
+                                    <p className="text-lg font-semibold">Back Side</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(getImageUrl(poa.poa_image_back_url));
+                                        alert('Image URL copied to clipboard!');
+                                      }}
+                                      className="mt-2 px-4 py-2 bg-white text-gray-800 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
