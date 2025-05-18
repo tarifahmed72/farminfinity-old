@@ -46,7 +46,7 @@ const Farmers = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     const fetchFarmers = async () => {
@@ -94,7 +94,7 @@ const Farmers = () => {
         setFarmers(fetchedFarmers);
         setTotalItems(response.data.total);
         
-        // Calculate total pages if not provided by API
+        // Calculate total pages based on 20 items per page
         const calculatedTotalPages = Math.ceil(response.data.total / ITEMS_PER_PAGE);
         setTotalPages(calculatedTotalPages);
 
