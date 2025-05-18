@@ -46,7 +46,7 @@ const Farmers = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const ITEMS_PER_PAGE = 50;
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     const fetchFarmers = async () => {
@@ -54,13 +54,10 @@ const Farmers = () => {
         setLoading(true);
         setError(null);
 
-        // Calculate skip based on current page (1-based to 0-based)
-        const skip = (currentPage - 1) * ITEMS_PER_PAGE;
-
-        // Build the URL with proper pagination parameters
-        let url = `/farmers/?skip=${skip}&limit=${ITEMS_PER_PAGE}`;
+        // Construct URL exactly as per API specification
+        let url = `/farmers/?page=${currentPage}&limit=${ITEMS_PER_PAGE}`;
         
-        // Add search and status filters
+        // Add filters as per API spec
         if (searchQuery) {
           url += `&search=${encodeURIComponent(searchQuery)}`;
         }
@@ -68,7 +65,17 @@ const Farmers = () => {
           url += `&status=${selectedStatus}`;
         }
 
-        const response = await axiosInstance.get<PaginationResponse>(url);
+        // Add authorization header
+        const token = localStorage.getItem('keycloak-token');
+        const response = await axiosInstance.get<PaginationResponse>(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.data || !Array.isArray(response.data.data)) {
+          throw new Error('Invalid response format from API');
+        }
 
         // Map the API response to our display format
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
@@ -86,10 +93,14 @@ const Farmers = () => {
         // Update state with new data and pagination info
         setFarmers(fetchedFarmers);
         setTotalItems(response.data.total);
-        setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
-      } catch (error) {
+        setTotalPages(response.data.total_pages);
+
+        // Clear error if successful
+        setError(null);
+      } catch (error: any) {
         console.error("Error fetching farmers:", error);
-        setError("Failed to fetch farmers data");
+        setError(error.response?.data?.detail || "Failed to fetch farmers data. Please try again.");
+        setFarmers([]);
       } finally {
         setLoading(false);
       }
@@ -101,7 +112,7 @@ const Farmers = () => {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [currentPage, searchQuery, selectedStatus]); // Dependencies that trigger a new fetch
+  }, [currentPage, searchQuery, selectedStatus]);
 
   const getStatusColor = (status: number) => {
     switch (status) {
@@ -189,89 +200,6 @@ const Farmers = () => {
 
     return pages;
   };
-
-  const renderGridView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {farmers.map((farmer) => (
-        <div
-          key={farmer.id}
-          onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
-          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-        >
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <FaUser className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{farmer.name}</h3>
-                  <p className="text-sm text-gray-500">{farmer.phone}</p>
-                </div>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
-                {getStatusText(farmer.status)}
-              </span>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Location</span>
-                <span className="text-gray-900">{farmer.city}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Created</span>
-                <span className="text-gray-900">{farmer.createdOn}</span>
-              </div>
-              {farmer.amount !== "N/A" && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Loan Amount</span>
-                  <span className="text-gray-900">{farmer.amount}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderListView = () => (
-    <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
-      <table className="w-full text-sm text-left bg-white">
-        <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
-          <tr>
-            <th className="px-6 py-4">Name</th>
-            <th className="px-6 py-4">Phone</th>
-            <th className="px-6 py-4">Location</th>
-            <th className="px-6 py-4">Created On</th>
-            <th className="px-6 py-4">Status</th>
-            <th className="px-6 py-4">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {farmers.map((farmer) => (
-            <tr
-              key={farmer.id}
-              onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
-              className="hover:bg-gray-50 cursor-pointer border-t border-gray-100"
-            >
-              <td className="px-6 py-4 font-medium text-gray-900">{farmer.name}</td>
-              <td className="px-6 py-4 text-blue-600">{farmer.phone}</td>
-              <td className="px-6 py-4 text-gray-600">{farmer.city}</td>
-              <td className="px-6 py-4 text-gray-600">{farmer.createdOn}</td>
-              <td className="px-6 py-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
-                  {getStatusText(farmer.status)}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-gray-600">{farmer.amount}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
