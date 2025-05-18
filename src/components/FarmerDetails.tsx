@@ -113,9 +113,30 @@ const FarmerDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard'>('profile');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [imageLoading, setImageLoading] = useState<Record<string, boolean>>({});
 
-  const getSignedUrl = async (filename: string): Promise<string | null> => {
+  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
+  const token = localStorage.getItem('token');
+
+  const getImageUrl = (imagePath: string | null | undefined): string => {
+    if (!imagePath) return '';
+    
+    // Log for debugging
+    console.log('Image Path:', imagePath);
+    console.log('Token:', token);
+    
+    // First check if we have a signed URL
+    if (signedUrls[imagePath]) {
+      console.log('Using signed URL:', signedUrls[imagePath]);
+      return signedUrls[imagePath];
+    }
+    
+    // Fallback to token-based URL
+    const url = `${baseUrl}${imagePath}?token=${token}`;
+    console.log('Using token-based URL:', url);
+    return url;
+  };
+
+  const getSignedUrl = async (filename: string) => {
     try {
       console.log('Fetching signed URL for:', filename);
       const response = await axiosInstance.get<SignedUrlResponse>(
@@ -129,51 +150,15 @@ const FarmerDetails: React.FC = () => {
     }
   };
 
-  const getImageUrl = async (imagePath: string | null | undefined): Promise<string> => {
-    if (!imagePath) return '';
-    
-    // If we already have a signed URL, use it
-    if (signedUrls[imagePath]) {
-      return signedUrls[imagePath];
-    }
-    
-    // Get a new signed URL
-    try {
-      setImageLoading(prev => ({ ...prev, [imagePath]: true }));
-      const signedUrl = await getSignedUrl(imagePath);
-      if (signedUrl) {
-        setSignedUrls(prev => ({ ...prev, [imagePath]: signedUrl }));
-        return signedUrl;
-      }
-      throw new Error('Failed to get signed URL');
-    } catch (error) {
-      console.error('Error getting image URL:', error);
-      return '';
-    } finally {
-      setImageLoading(prev => ({ ...prev, [imagePath]: false }));
-    }
-  };
-
-  const getImageUrlSafe = (key: string | null | undefined): string => {
-    if (!key) return '';
-    return signedUrls[key] || '';
-  };
-
-  const loadSignedUrls = async (bioData: Bio | null, poiData: POIData | null, poaData: POAData | null) => {
+  const loadSignedUrls = async (poiData: POIData | null, poaData: POAData | null) => {
     const urlPromises = new Map();
 
     // Helper function to add image to promises
     const addImageToPromises = (image: string | null | undefined) => {
       if (image && !signedUrls[image]) {
         urlPromises.set(image, getSignedUrl(image));
-        setImageLoading(prev => ({ ...prev, [image]: true }));
       }
     };
-
-    // Add profile photo
-    if (bioData?.photo) {
-      addImageToPromises(bioData.photo);
-    }
 
     // Add POI images
     if (poiData) {
@@ -194,18 +179,13 @@ const FarmerDetails: React.FC = () => {
         let i = 0;
         urlPromises.forEach((_, key) => {
           if (urlResults[i]) {
-            newSignedUrls[key] = urlResults[i] || '';
+            newSignedUrls[key] = urlResults[i];
           }
-          setImageLoading(prev => ({ ...prev, [key]: false }));
           i++;
         });
         setSignedUrls(newSignedUrls);
       } catch (error) {
         console.error('Error loading signed URLs:', error);
-        // Reset loading state for all images
-        urlPromises.forEach((_, key) => {
-          setImageLoading(prev => ({ ...prev, [key]: false }));
-        });
       }
     }
   };
@@ -223,12 +203,10 @@ const FarmerDetails: React.FC = () => {
           `/bio-histories/${applicationId}?skip=0&limit=10`
         );
 
-        let bioData = null;
         if (bioHistoryResponse.data && bioHistoryResponse.data.length > 0) {
           const bio_version_id = bioHistoryResponse.data[0].bio_version_id;
           const bioResponse = await axiosInstance.get(`/bio/${bio_version_id}`);
-          bioData = bioResponse.data;
-          setBio(bioData);
+          setBio(bioResponse.data);
         }
 
         // Fetch KYC
@@ -256,8 +234,8 @@ const FarmerDetails: React.FC = () => {
           setPoa(poaData);
         }
 
-        // Load signed URLs for all images
-        await loadSignedUrls(bioData, poiData, poaData);
+        // Load signed URLs for POI and POA images
+        await loadSignedUrls(poiData, poaData);
 
       } catch (err: any) {
         setError('Failed to fetch data: ' + err.message);
@@ -269,19 +247,6 @@ const FarmerDetails: React.FC = () => {
 
     fetchFarmerData();
   }, [farmerId, applicationId]);
-
-  useEffect(() => {
-    const loadProfilePhoto = async () => {
-      if (bio?.photo) {
-        const url = await getImageUrl(bio.photo);
-        if (url) {
-          setSignedUrls(prev => ({ ...prev, [bio.photo!]: url }));
-        }
-      }
-    };
-
-    loadProfilePhoto();
-  }, [bio?.photo]);
 
   const handleTabClick = (
     tab: 'profile' | 'kyc' | 'activities' | 'scorecard'
@@ -360,30 +325,14 @@ const FarmerDetails: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {bio?.photo ? (
-                    <div className="relative">
-                      {imageLoading[bio.photo] ? (
-                        <div className="w-20 h-20 flex items-center justify-center bg-gray-100 rounded-full">
-                          <FaSpinner className="w-8 h-8 text-green-500 animate-spin" />
-                        </div>
-                      ) : getImageUrlSafe(bio.photo) ? (
-                        <img
-                          src={getImageUrlSafe(bio.photo)}
-                          alt={bio.name}
-                          className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-                          onClick={() => setSelectedImage(getImageUrlSafe(bio.photo))}
-                          onError={(e) => {
-                            console.error('Error loading profile photo');
-                            e.currentTarget.src = 'https://via.placeholder.com/200x200?text=Photo+Not+Available';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center">
-                          <FaUser className="h-8 w-8 text-white/80" />
-                        </div>
-                      )}
-                    </div>
+                    <img
+                      src={getImageUrl(bio.photo)}
+                      alt={bio.name}
+                      className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={() => setSelectedImage(getImageUrl(bio.photo))}
+                    />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center">
+                    <div className="h-20 w-20 rounded-full bg-white/20 flex items-center justify-center">
                       <FaUser className="h-8 w-8 text-white/80" />
                     </div>
                   )}
@@ -526,10 +475,10 @@ const FarmerDetails: React.FC = () => {
                     </div>
                     <div className="ml-14">
                       <img
-                        src={getImageUrlSafe(bio.photo)}
+                        src={getImageUrl(bio.photo)}
                         alt="Farmer"
                         className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
-                        onClick={() => setSelectedImage(getImageUrlSafe(bio.photo))}
+                        onClick={() => setSelectedImage(getImageUrl(bio.photo))}
                       />
                     </div>
                   </div>
@@ -637,10 +586,10 @@ const FarmerDetails: React.FC = () => {
                             <div className="relative group">
                               <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
-                                  src={getImageUrlSafe(poi.poi_image_front_url)}
+                                  src={getImageUrl(poi.poi_image_front_url)}
                                   alt="POI Front"
                                   className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrlSafe(poi.poi_image_front_url))}
+                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
                                   onError={(e) => {
                                     console.error('Error loading POI front image');
                                     e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
@@ -652,7 +601,7 @@ const FarmerDetails: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = getImageUrlSafe(poi.poi_image_front_url);
+                                    const url = getImageUrl(poi.poi_image_front_url);
                                     navigator.clipboard.writeText(url);
                                     alert('Image URL copied to clipboard!');
                                   }}
@@ -667,10 +616,10 @@ const FarmerDetails: React.FC = () => {
                             <div className="relative group">
                               <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
-                                  src={getImageUrlSafe(poi.poi_image_back_url)}
+                                  src={getImageUrl(poi.poi_image_back_url)}
                                   alt="POI Back"
                                   className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrlSafe(poi.poi_image_back_url))}
+                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
                                   onError={(e) => {
                                     console.error('Error loading POI back image');
                                     e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
@@ -682,7 +631,7 @@ const FarmerDetails: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = getImageUrlSafe(poi.poi_image_back_url);
+                                    const url = getImageUrl(poi.poi_image_back_url);
                                     navigator.clipboard.writeText(url);
                                     alert('Image URL copied to clipboard!');
                                   }}
@@ -732,10 +681,10 @@ const FarmerDetails: React.FC = () => {
                             <div className="relative group">
                               <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
-                                  src={getImageUrlSafe(poa.poa_image_front_url)}
+                                  src={getImageUrl(poa.poa_image_front_url)}
                                   alt="POA Front"
                                   className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrlSafe(poa.poa_image_front_url))}
+                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
                                   onError={(e) => {
                                     console.error('Error loading POA front image');
                                     e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
@@ -747,7 +696,7 @@ const FarmerDetails: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = getImageUrlSafe(poa.poa_image_front_url);
+                                    const url = getImageUrl(poa.poa_image_front_url);
                                     navigator.clipboard.writeText(url);
                                     alert('Image URL copied to clipboard!');
                                   }}
@@ -762,10 +711,10 @@ const FarmerDetails: React.FC = () => {
                             <div className="relative group">
                               <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                 <img
-                                  src={getImageUrlSafe(poa.poa_image_back_url)}
+                                  src={getImageUrl(poa.poa_image_back_url)}
                                   alt="POA Back"
                                   className="w-full h-full object-cover transition-transform duration-200 transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage(getImageUrlSafe(poa.poa_image_back_url))}
+                                  onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
                                   onError={(e) => {
                                     console.error('Error loading POA back image');
                                     e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
@@ -777,7 +726,7 @@ const FarmerDetails: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = getImageUrlSafe(poa.poa_image_back_url);
+                                    const url = getImageUrl(poa.poa_image_back_url);
                                     navigator.clipboard.writeText(url);
                                     alert('Image URL copied to clipboard!');
                                   }}
