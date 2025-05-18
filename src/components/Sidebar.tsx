@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { FaUsers, FaUserSecret, FaTachometerAlt, FaChevronRight, FaSignOutAlt } from "react-icons/fa";
-import { RiBankFill } from "react-icons/ri";
-import { ImUsers } from "react-icons/im";
+import { FaUsers, FaUserSecret, FaTachometerAlt, FaSignOutAlt, FaChartLine } from "react-icons/fa";
+import { RiBankFill, RiOrganizationChart } from "react-icons/ri";
 import { HiMenu, HiX } from "react-icons/hi";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { IconType } from "react-icons";
@@ -10,17 +9,11 @@ interface MenuItem {
   title: string;
   icon: IconType;
   path: string;
-  isMain?: boolean;
-  items?: {
-    title: string;
-    icon: IconType;
-    path: string;
-  }[];
+  description?: string;
 }
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -34,7 +27,6 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    // Add your logout logic here
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
@@ -45,19 +37,37 @@ const Sidebar = () => {
       title: "Dashboard",
       icon: FaTachometerAlt,
       path: "/dashboard",
-      isMain: true
+      description: "Overview & Analytics"
     },
     {
-      title: "Users",
+      title: "Staff Management",
       icon: FaUsers,
-      path: "",
-      items: [
-        { title: "Staffs", icon: FaUsers, path: "/staff" },
-        { title: "Farmers", icon: FaUsers, path: "/farmers" },
-        { title: "FPO", icon: ImUsers, path: "/fpo" },
-        { title: "Agent", icon: FaUserSecret, path: "/agent" },
-        { title: "Bank Agent", icon: RiBankFill, path: "/bank-agent" }
-      ]
+      path: "/staff",
+      description: "Manage Staff Members"
+    },
+    {
+      title: "Farmers",
+      icon: FaUsers,
+      path: "/farmers",
+      description: "Farmer Database"
+    },
+    {
+      title: "FPO",
+      icon: RiOrganizationChart,
+      path: "/fpo",
+      description: "Producer Organizations"
+    },
+    {
+      title: "Agents",
+      icon: FaUserSecret,
+      path: "/agent",
+      description: "Field Agents"
+    },
+    {
+      title: "Bank Agents",
+      icon: RiBankFill,
+      path: "/bank-agent",
+      description: "Financial Partners"
     }
   ];
 
@@ -82,7 +92,7 @@ const Sidebar = () => {
       <div
         className={`${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-gray-100 transform transition-all duration-300 ease-in-out h-screen lg:h-full overflow-hidden group`}
+        } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-gray-100 transform transition-all duration-300 ease-in-out h-screen lg:h-full overflow-hidden`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -94,64 +104,42 @@ const Sidebar = () => {
           </div>
 
           {/* Menu Items */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent p-4 space-y-6 mt-16 lg:mt-0">
-            {menuItems.map((section, idx) => (
-              <div key={idx} className="relative">
-                {section.isMain ? (
-                  <Link
-                    to={section.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActiveRoute(section.path)
-                        ? "bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/20"
-                        : "text-gray-300 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <section.icon className={`text-xl ${isActiveRoute(section.path) ? "animate-pulse" : ""}`} />
-                    <span className="font-medium">{section.title}</span>
-                  </Link>
-                ) : (
-                  <div>
-                    <button
-                      onClick={() => setActiveSubmenu(activeSubmenu === section.title ? null : section.title)}
-                      className="w-full text-left"
-                    >
-                      <div className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-200 transition-colors">
-                        <span>{section.title}</span>
-                        <FaChevronRight className={`transform transition-transform duration-200 ${
-                          activeSubmenu === section.title ? "rotate-90" : ""
-                        }`} />
-                      </div>
-                    </button>
-                    <div className={`space-y-1 mt-2 transition-all duration-200 ${
-                      activeSubmenu === section.title ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                    }`}>
-                      {section.items?.map((item, itemIdx) => (
-                        <Link
-                          key={itemIdx}
-                          to={item.path}
-                          className={`flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-200 group/item ${
-                            isActiveRoute(item.path)
-                              ? "bg-gray-800 text-white"
-                              : "text-gray-400 hover:text-gray-100 hover:bg-white/5"
-                          }`}
-                        >
-                          <item.icon className={`text-lg transition-colors duration-200 ${
-                            isActiveRoute(item.path) 
-                              ? "text-green-500" 
-                              : "text-gray-500 group-hover/item:text-gray-300"
-                          }`} />
-                          <span className="font-medium">{item.title}</span>
-                          <FaChevronRight className={`ml-auto text-xs transition-all duration-200 ${
-                            isActiveRoute(item.path) 
-                              ? "text-green-500 translate-x-1" 
-                              : "text-gray-600 group-hover/item:translate-x-1"
-                          }`} />
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent p-4 space-y-2 mt-16 lg:mt-0">
+            {menuItems.map((item, idx) => (
+              <Link
+                key={idx}
+                to={item.path}
+                className={`group flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                  isActiveRoute(item.path)
+                    ? "bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/20"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg ${
+                  isActiveRoute(item.path)
+                    ? "bg-white/20"
+                    : "bg-gray-800/50 group-hover:bg-gray-800"
+                }`}>
+                  <item.icon className={`text-xl transition-transform duration-200 ${
+                    isActiveRoute(item.path)
+                      ? "scale-110"
+                      : "group-hover:scale-110"
+                  }`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{item.title}</p>
+                  <p className={`text-xs truncate transition-colors ${
+                    isActiveRoute(item.path)
+                      ? "text-white/80"
+                      : "text-gray-500 group-hover:text-gray-400"
+                  }`}>{item.description}</p>
+                </div>
+                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  isActiveRoute(item.path)
+                    ? "bg-white scale-100"
+                    : "bg-gray-600 scale-0 group-hover:scale-100"
+                }`} />
+              </Link>
             ))}
           </div>
 
