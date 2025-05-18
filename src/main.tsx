@@ -1,41 +1,54 @@
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import keycloak from './keycloak';
+import keycloak, { initKeycloak } from './keycloak';
 
-keycloak
-  .init({
-    onLoad: 'login-required',
-    checkLoginIframe: false,
-  })
-  .then((authenticated) => {
-    if (authenticated) {
-      // Store token
-      localStorage.setItem("keycloak-token", keycloak.token || "");
+const renderApp = () => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
+};
 
-      // Optional: refresh token every 60s
+// Initialize the application
+const init = async () => {
+  try {
+    const auth = await initKeycloak();
+    
+    if (auth.isAuthenticated && auth.token) {
+      // Store tokens
+      localStorage.setItem('keycloak-token', auth.token);
+      if (auth.refreshToken) {
+        localStorage.setItem('keycloak-refresh-token', auth.refreshToken);
+      }
+
+      // Set up periodic token refresh (every 5 minutes)
       setInterval(() => {
-        keycloak
-          .updateToken(60)
+        keycloak.updateToken(300)
           .then((refreshed) => {
             if (refreshed) {
-              localStorage.setItem("keycloak-token", keycloak.token || "");
-              console.log("Token refreshed");
+              localStorage.setItem('keycloak-token', keycloak.token || '');
+              console.log('Token refreshed successfully');
             }
           })
-          .catch(() => {
-            console.warn("Token refresh failed");
+          .catch((error) => {
+            console.error('Token refresh failed:', error);
+            // Redirect to login on token refresh failure
+            window.location.href = '/login';
           });
-      }, 60000); // every 60 seconds
+      }, 300000); // 5 minutes
 
-      ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
+      // Render the application
+      renderApp();
     } else {
-      window.location.reload();
+      console.error('Authentication failed');
+      window.location.href = '/login';
     }
-  })
-  .catch((error) => {
-    console.error('Keycloak init failed', error);
-  });
+  } catch (error) {
+    console.error('Initialization failed:', error);
+    // Handle initialization error (show error page or retry)
+  }
+};
+
+// Start the application
+init();
 
 // import ReactDOM from 'react-dom/client';
 // import App from './App.tsx';

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import keycloak from '../keycloak';
 
 const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
 
@@ -6,25 +7,46 @@ const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
+    'Accept': 'application/json'
   },
-  withCredentials: false // Set this to false for cross-origin requests without credentials
+  withCredentials: true // Enable credentials for cross-origin requests
 });
 
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
-  (config) => {
-    // Don't add token for login-related endpoints
+  async (config) => {
+    // Skip token for public endpoints
     if (config.url?.includes('/send-otp') || config.url?.includes('/verify-otp')) {
       return config;
     }
 
-    const token = localStorage.getItem('keycloak-token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      // Check if token needs refresh
+      const tokenExpired = keycloak.isTokenExpired();
+      if (tokenExpired) {
+        const refreshed = await keycloak.updateToken(5);
+        if (refreshed) {
+          localStorage.setItem('keycloak-token', keycloak.token || '');
+        }
+      }
+
+      // Get the current valid token
+      const token = keycloak.token || localStorage.getItem('keycloak-token');
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // Redirect to login if no token available
+        window.location.href = '/login';
+        return Promise.reject('No valid token available');
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // Redirect to login on token refresh failure
+      window.location.href = '/login';
+      return Promise.reject(error);
     }
+
     return config;
   },
   (error) => {
@@ -32,14 +54,29 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle errors
+// Add a response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      try {
+        // Try to refresh the token
+        const refreshed = await keycloak.updateToken(5);
+        if (refreshed) {
+          // Token refreshed successfully, retry the original request
+          const token = keycloak.token;
+          localStorage.setItem('keycloak-token', token || '');
+          error.config.headers.Authorization = `Bearer ${token}`;
+          return axiosInstance(error.config);
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+      }
+      
+      // If refresh failed or not possible, redirect to login
       localStorage.removeItem('keycloak-token');
-      window.location.href = '/login'; // Redirect to login page
+      localStorage.removeItem('keycloak-refresh-token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
