@@ -142,6 +142,15 @@ const FarmerDetails: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const imageBaseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+
+  // Function to get image URL with token
+  const getImageUrl = (imagePath: string | null | undefined) => {
+    if (!imagePath) return '';
+    return `${imageBaseUrl}${imagePath}?token=${token}`;
+  };
+
   useEffect(() => {
     const fetchFarmerData = async () => {
       if (!farmerId || !applicationId) return;
@@ -271,7 +280,7 @@ const FarmerDetails: React.FC = () => {
               <div className="flex items-center space-x-4">
                 {bio?.photo ? (
                   <img
-                    src={`${imageBaseUrl}${bio.photo}`}
+                    src={getImageUrl(bio.photo)}
                     alt={bio.name}
                     className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover"
                   />
@@ -411,7 +420,7 @@ const FarmerDetails: React.FC = () => {
                     </div>
                     <div className="ml-14">
                       <img
-                        src={`${imageBaseUrl}${bio.photo}`}
+                        src={getImageUrl(bio.photo)}
                         alt="Farmer"
                         className="w-48 h-48 object-cover rounded-lg shadow-sm"
                       />
@@ -557,67 +566,65 @@ const FarmerDetails: React.FC = () => {
                       </div>
 
                       {/* POI Images */}
-                      {(poi.poi_image_front_url || poi.poi_image_back_url) && (
+                      {poi.poi_image_front_url && (
                         <div className="mt-6">
                           <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                             <FaIdCard className="mr-2 text-purple-600" />
                             Document Images
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {poi.poi_image_front_url && (
-                              <div className="bg-gray-50 rounded-lg p-4">
-                                <p className="text-sm font-medium text-gray-500 mb-2">Front Side</p>
-                                <div className="relative group cursor-pointer">
-                                  <img
-                                    src={`${imageBaseUrl}${poi.poi_image_front_url}`}
-                                    alt="POI Front"
-                                    className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(`${imageBaseUrl}${poi.poi_image_front_url}`)}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                    <div className="flex flex-col items-center space-y-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(`${imageBaseUrl}${poi.poi_image_front_url}`);
-                                          alert('Image URL copied to clipboard!');
-                                        }}
-                                        className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-                                      >
-                                        Copy URL
-                                      </button>
-                                      <button
-                                        onClick={() => setSelectedImage(`${imageBaseUrl}${poi.poi_image_front_url}`)}
-                                        className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors duration-200"
-                                      >
-                                        View Image
-                                      </button>
-                                    </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <p className="text-sm font-medium text-gray-500 mb-2">Front Side</p>
+                              <div className="relative group cursor-pointer">
+                                <img
+                                  src={getImageUrl(poi.poi_image_front_url)}
+                                  alt="POI Front"
+                                  className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
+                                  onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(getImageUrl(poi.poi_image_front_url));
+                                        alert('Image URL copied to clipboard!');
+                                      }}
+                                      className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      Copy URL
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                      className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors duration-200"
+                                    >
+                                      View Image
+                                    </button>
                                   </div>
                                 </div>
-                                <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
-                                  <p className="text-xs text-gray-500 break-all">
-                                    URL: {`${imageBaseUrl}${poi.poi_image_front_url}`}
-                                  </p>
-                                </div>
                               </div>
-                            )}
+                              <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
+                                <p className="text-xs text-gray-500 break-all">
+                                  URL: {getImageUrl(poi.poi_image_front_url)}
+                                </p>
+                              </div>
+                            </div>
                             {poi.poi_image_back_url && (
                               <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-sm font-medium text-gray-500 mb-2">Back Side</p>
                                 <div className="relative group cursor-pointer">
                                   <img
-                                    src={`${imageBaseUrl}${poi.poi_image_back_url}`}
+                                    src={getImageUrl(poi.poi_image_back_url)}
                                     alt="POI Back"
                                     className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(`${imageBaseUrl}${poi.poi_image_back_url}`)}
+                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <div className="flex flex-col items-center space-y-2">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigator.clipboard.writeText(`${imageBaseUrl}${poi.poi_image_back_url}`);
+                                          navigator.clipboard.writeText(getImageUrl(poi.poi_image_back_url));
                                           alert('Image URL copied to clipboard!');
                                         }}
                                         className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
@@ -625,7 +632,7 @@ const FarmerDetails: React.FC = () => {
                                         Copy URL
                                       </button>
                                       <button
-                                        onClick={() => setSelectedImage(`${imageBaseUrl}${poi.poi_image_back_url}`)}
+                                        onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
                                         className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors duration-200"
                                       >
                                         View Image
@@ -635,7 +642,7 @@ const FarmerDetails: React.FC = () => {
                                 </div>
                                 <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
                                   <p className="text-xs text-gray-500 break-all">
-                                    URL: {`${imageBaseUrl}${poi.poi_image_back_url}`}
+                                    URL: {getImageUrl(poi.poi_image_back_url)}
                                   </p>
                                 </div>
                               </div>
@@ -739,17 +746,17 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-500 mb-2">Front Side</p>
                                 <div className="relative group cursor-pointer">
                                   <img
-                                    src={`${imageBaseUrl}${poa.poa_image_front_url}`}
+                                    src={getImageUrl(poa.poa_image_front_url)}
                                     alt="POA Front"
                                     className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(`${imageBaseUrl}${poa.poa_image_front_url}`)}
+                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <div className="flex flex-col items-center space-y-2">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigator.clipboard.writeText(`${imageBaseUrl}${poa.poa_image_front_url}`);
+                                          navigator.clipboard.writeText(getImageUrl(poa.poa_image_front_url));
                                           alert('Image URL copied to clipboard!');
                                         }}
                                         className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
@@ -757,7 +764,7 @@ const FarmerDetails: React.FC = () => {
                                         Copy URL
                                       </button>
                                       <button
-                                        onClick={() => setSelectedImage(`${imageBaseUrl}${poa.poa_image_front_url}`)}
+                                        onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
                                         className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors duration-200"
                                       >
                                         View Image
@@ -767,7 +774,7 @@ const FarmerDetails: React.FC = () => {
                                 </div>
                                 <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
                                   <p className="text-xs text-gray-500 break-all">
-                                    URL: {`${imageBaseUrl}${poa.poa_image_front_url}`}
+                                    URL: {getImageUrl(poa.poa_image_front_url)}
                                   </p>
                                 </div>
                               </div>
@@ -777,17 +784,17 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-500 mb-2">Back Side</p>
                                 <div className="relative group cursor-pointer">
                                   <img
-                                    src={`${imageBaseUrl}${poa.poa_image_back_url}`}
+                                    src={getImageUrl(poa.poa_image_back_url)}
                                     alt="POA Back"
                                     className="rounded-lg shadow-sm border border-gray-200 w-full h-48 object-cover transform transition-transform duration-200 group-hover:scale-[1.02]"
-                                    onClick={() => setSelectedImage(`${imageBaseUrl}${poa.poa_image_back_url}`)}
+                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <div className="flex flex-col items-center space-y-2">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigator.clipboard.writeText(`${imageBaseUrl}${poa.poa_image_back_url}`);
+                                          navigator.clipboard.writeText(getImageUrl(poa.poa_image_back_url));
                                           alert('Image URL copied to clipboard!');
                                         }}
                                         className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
@@ -795,7 +802,7 @@ const FarmerDetails: React.FC = () => {
                                         Copy URL
                                       </button>
                                       <button
-                                        onClick={() => setSelectedImage(`${imageBaseUrl}${poa.poa_image_back_url}`)}
+                                        onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
                                         className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors duration-200"
                                       >
                                         View Image
@@ -805,7 +812,7 @@ const FarmerDetails: React.FC = () => {
                                 </div>
                                 <div className="mt-2 p-2 bg-white rounded-md border border-gray-200">
                                   <p className="text-xs text-gray-500 break-all">
-                                    URL: {`${imageBaseUrl}${poa.poa_image_back_url}`}
+                                    URL: {getImageUrl(poa.poa_image_back_url)}
                                   </p>
                                 </div>
                               </div>
