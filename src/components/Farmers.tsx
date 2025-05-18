@@ -52,9 +52,21 @@ const Farmers = () => {
     const fetchFarmers = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get<PaginationResponse>(
-          `/farmers/?skip=${(currentPage - 1) * ITEMS_PER_PAGE}&limit=${ITEMS_PER_PAGE}`
-        );
+        setError(null);
+
+        // Calculate skip based on current page
+        const skip = (currentPage - 1) * ITEMS_PER_PAGE;
+
+        // Add search and status filters to the API call
+        let url = `/farmers/?skip=${skip}&limit=${ITEMS_PER_PAGE}`;
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        if (selectedStatus !== 'all') {
+          url += `&status=${selectedStatus}`;
+        }
+
+        const response = await axiosInstance.get<PaginationResponse>(url);
 
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
           id: farmer.id,
@@ -80,7 +92,7 @@ const Farmers = () => {
     };
 
     fetchFarmers();
-  }, [currentPage]);
+  }, [currentPage, searchQuery, selectedStatus]); // Add dependencies to trigger fetch on filter changes
 
   const getStatusColor = (status: number) => {
     switch (status) {
@@ -108,21 +120,14 @@ const Farmers = () => {
     }
   };
 
-  const filteredFarmers = farmers.filter((farmer) => {
-    const matchesSearch = (farmer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      farmer.phone.includes(searchQuery));
-    const matchesStatus = selectedStatus === 'all' || farmer.status.toString() === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStatus(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when changing status
   };
 
   const handleNextPage = () => {
@@ -177,7 +182,7 @@ const Farmers = () => {
 
   const renderGridView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredFarmers.map((farmer) => (
+      {farmers.map((farmer) => (
         <div
           key={farmer.id}
           onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
@@ -235,7 +240,7 @@ const Farmers = () => {
           </tr>
         </thead>
         <tbody>
-          {filteredFarmers.map((farmer) => (
+          {farmers.map((farmer) => (
             <tr
               key={farmer.id}
               onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
@@ -320,50 +325,50 @@ const Farmers = () => {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <FaSpinner className="h-8 w-8 animate-spin text-green-600 mb-4" />
-            <p className="text-gray-600">Loading farmers...</p>
+        {/* Content */}
+        {viewMode === 'grid' ? renderGridView() : renderListView()}
+
+        {/* Pagination */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center text-sm text-gray-500">
+            <span>
+              Showing {farmers.length > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} to {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} farmers
+            </span>
           </div>
-        ) : (
-          <>
-            {/* Content */}
-            {viewMode === 'grid' ? renderGridView() : renderListView()}
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1 || loading}
+              className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              <FaChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
 
-            {/* Pagination */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center text-sm text-gray-500">
-                <span>
-                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} farmers
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                >
-                  <FaChevronLeft className="h-4 w-4" />
-                  Previous
-                </button>
-
-                <div className="hidden sm:flex items-center gap-1">
-                  {renderPaginationNumbers()}
-                </div>
-
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage >= totalPages}
-                  className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                >
-                  Next
-                  <FaChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+            <div className="hidden sm:flex items-center gap-1">
+              {renderPaginationNumbers()}
             </div>
-          </>
+
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage >= totalPages || loading}
+              className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              Next
+              <FaChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Loading overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <FaSpinner className="h-8 w-8 animate-spin text-green-600 mb-4" />
+              <p className="text-gray-600">Loading farmers...</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
