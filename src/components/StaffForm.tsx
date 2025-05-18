@@ -1,11 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FaUser, FaEnvelope, FaPhone, FaUserTie, FaCalendarAlt, FaSpinner } from 'react-icons/fa';
-import axiosInstance from '../utils/axios';
-
-interface SignedUrlResponse {
-  filename: string;
-  signed_url: string;
-}
+import { useState } from 'react';
+import { FaUser, FaEnvelope, FaPhone, FaUserTie, FaCalendarAlt } from 'react-icons/fa';
 
 interface StaffFormData {
   name: string;
@@ -15,7 +9,6 @@ interface StaffFormData {
   joining_date: string;
   status: 'active' | 'inactive';
   profile_photo?: File | null;
-  profile_photo_url?: string | null;
 }
 
 interface StaffFormProps {
@@ -38,45 +31,11 @@ const StaffForm: React.FC<StaffFormProps> = ({
     role: initialData?.role || 'staff',
     joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
     status: initialData?.status || 'active',
-    profile_photo: null,
-    profile_photo_url: initialData?.profile_photo_url || null
+    profile_photo: null
   });
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof StaffFormData, string>>>({});
-  const [imageLoading, setImageLoading] = useState(false);
-
-  const getSignedUrl = async (filename: string): Promise<string | null> => {
-    try {
-      const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${filename}`
-      );
-      return response.data.signed_url;
-    } catch (error) {
-      console.error('Error fetching signed URL:', error);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    const loadProfilePhoto = async () => {
-      if (formData.profile_photo_url) {
-        setImageLoading(true);
-        try {
-          const signedUrl = await getSignedUrl(formData.profile_photo_url);
-          if (signedUrl) {
-            setPreviewUrl(signedUrl);
-          }
-        } catch (error) {
-          console.error('Error loading profile photo:', error);
-        } finally {
-          setImageLoading(false);
-        }
-      }
-    };
-
-    loadProfilePhoto();
-  }, [formData.profile_photo_url]);
 
   const validateForm = () => {
     const newErrors: Partial<Record<keyof StaffFormData, string>> = {};
@@ -130,18 +89,8 @@ const StaffForm: React.FC<StaffFormProps> = ({
       <div className="flex flex-col items-center">
         <div className="relative">
           <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-            {imageLoading ? (
-              <FaSpinner className="h-8 w-8 text-gray-400 animate-spin" />
-            ) : previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  console.error('Error loading profile photo');
-                  e.currentTarget.src = 'https://via.placeholder.com/200x200?text=Photo+Not+Available';
-                }}
-              />
+            {previewUrl ? (
+              <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
             ) : (
               <FaUser className="h-12 w-12 text-gray-400" />
             )}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import axios from 'axios';
 
 interface FarmerKycProps {
   applicationId: string;
@@ -25,12 +26,25 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [imageLoading, setImageLoading] = useState<Record<string, boolean>>({});
 
-  const getSignedUrl = async (filename: string): Promise<string | null> => {
+  // Get token from localStorage
+  const token = localStorage.getItem('keycloak-token');
+  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
+
+  const getImageUrl = (imagePath: string): string => {
+    if (!imagePath) return '';
+    // First check if we have a signed URL
+    if (signedUrls[imagePath]) {
+      return signedUrls[imagePath];
+    }
+    // Fallback to token-based URL
+    return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+  };
+
+  const getSignedUrl = async (filename: string) => {
     try {
-      const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${filename}`
+      const response = await axios.get<SignedUrlResponse>(
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
       );
       return response.data.signed_url;
     } catch (error) {
@@ -39,21 +53,13 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     }
   };
 
-  const getImageUrlSafe = (key: string | null | undefined): string => {
-    if (!key) return '';
-    return signedUrls[key] || '';
-  };
-
-  const loadSignedUrls = async (data: Activity | null) => {
-    if (!data) return;
-    
+  const loadSignedUrls = async (data: any) => {
     const urlPromises = new Map();
 
     // Helper function to add image to promises
     const addImageToPromises = (image: string) => {
       if (image && !signedUrls[image]) {
         urlPromises.set(image, getSignedUrl(image));
-        setImageLoading(prev => ({ ...prev, [image]: true }));
       }
     };
 
@@ -80,18 +86,13 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
         let i = 0;
         urlPromises.forEach((_, key) => {
           if (urlResults[i]) {
-            newSignedUrls[key] = urlResults[i] || '';
+            newSignedUrls[key] = urlResults[i];
           }
-          setImageLoading(prev => ({ ...prev, [key]: false }));
           i++;
         });
         setSignedUrls(newSignedUrls);
       } catch (error) {
         console.error('Error loading signed URLs:', error);
-        // Reset loading state for all images
-        urlPromises.forEach((_, key) => {
-          setImageLoading(prev => ({ ...prev, [key]: false }));
-        });
       }
     }
   };
@@ -158,24 +159,14 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       <div className="my-6">
         <h3 className="text-lg font-semibold mb-3">{title}:</h3>
         <div className="flex flex-wrap gap-4">
-          {images.map((img, idx) => (
-            <div key={idx} className="relative">
-              {imageLoading[img] ? (
-                <div className="w-40 h-40 flex items-center justify-center bg-gray-100 rounded-lg">
-                  <FaSpinner className="w-8 h-8 text-green-500 animate-spin" />
-                </div>
-              ) : (
-                <img
-                  src={getImageUrlSafe(img)}
-                  alt={`${title} ${idx + 1}`}
-                  className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    console.error('Error loading image');
-                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                  }}
-                />
-              )}
-            </div>
+          {images.map((filename, idx) => (
+            <img
+              key={idx}
+              src={getImageUrl(filename)}
+              alt={`${title} ${idx + 1}`}
+              className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
+              loading="lazy"
+            />
           ))}
         </div>
       </div>
@@ -327,7 +318,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
               <img
-                src={getImageUrlSafe(data.facility_gps_image)}
+                src={getImageUrl(data.facility_gps_image)}
                 alt="Facility GPS"
                 className="w-64 h-64 object-cover rounded-md shadow"
                 loading="lazy"
