@@ -1,11 +1,10 @@
 import { useState } from 'react';
+import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
-import axios from 'axios';
-import { FaCalendarAlt, FaLeaf, FaTractor, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 
-type FarmerKycProps = {
-  applicationId?: string;
-};
+interface FarmerKycProps {
+  applicationId: string;
+}
 
 type Activity = {
   primary_activity_type: string;
@@ -14,29 +13,20 @@ type Activity = {
   secondary_activity?: any;
 };
 
-interface SignedUrlResponse {
-  filename: string;
-  signed_url: string;
-}
-
 const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [financialYear, setFinancialYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
-  const getSignedUrl = async (filename: string) => {
-    try {
-      const response = await axios.get<SignedUrlResponse>(
-        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
-      );
-      return response.data.signed_url;
-    } catch (error) {
-      console.error('Error fetching signed URL:', error);
-      return null;
-    }
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
+
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return '';
+    return `${baseUrl}${imagePath}?token=${token}`;
   };
 
   const fetchActivity = async (selectedYear: string) => {
@@ -45,56 +35,12 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       setLoading(true);
       setErrorMsg('');
       setActivity(null);
-      setSignedUrls({});
 
       const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
       
       if (!data || Object.keys(data).length === 0) {
         setErrorMsg('No activity data available for selected financial year.');
       } else {
-        // Fetch signed URLs for all images
-        const urlPromises = new Map();
-
-        // Primary activity images
-        if (data.primary_activity?.images?.[0]) {
-          data.primary_activity.images[0].forEach((filename: string) => {
-            urlPromises.set(filename, getSignedUrl(filename));
-          });
-        }
-
-        // Secondary activity images
-        if (data.secondary_activity?.images?.[0]) {
-          data.secondary_activity.images[0].forEach((filename: string) => {
-            urlPromises.set(filename, getSignedUrl(filename));
-          });
-        }
-
-        // Facility GPS images
-        if (data.primary_activity?.facility_gps_image) {
-          urlPromises.set(
-            data.primary_activity.facility_gps_image,
-            getSignedUrl(data.primary_activity.facility_gps_image)
-          );
-        }
-        if (data.secondary_activity?.facility_gps_image) {
-          urlPromises.set(
-            data.secondary_activity.facility_gps_image,
-            getSignedUrl(data.secondary_activity.facility_gps_image)
-          );
-        }
-
-        // Wait for all signed URLs to be fetched
-        const urlResults = await Promise.all(urlPromises.values());
-        const newSignedUrls: Record<string, string> = {};
-        let i = 0;
-        urlPromises.forEach((_, key) => {
-          if (urlResults[i]) {
-            newSignedUrls[key] = urlResults[i];
-          }
-          i++;
-        });
-
-        setSignedUrls(newSignedUrls);
         setActivity(data);
       }
     } catch (error) {
@@ -146,7 +92,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
           {images.map((img, idx) => (
             <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all">
               <img
-                src={signedUrls[img] || ''}
+                src={getImageUrl(img)}
                 alt={`${title} ${idx + 1}`}
                 className="w-full h-full object-cover hover:scale-105 transition-transform"
               />
@@ -315,7 +261,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
               <img
-                src={signedUrls[data.facility_gps_image] || ''}
+                src={getImageUrl(data.facility_gps_image)}
                 alt="Facility GPS"
                 className="w-64 h-64 object-cover rounded-md shadow"
               />
@@ -394,7 +340,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   if (errorMsg) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <FaExclamationTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <FaSpinner className="h-12 w-12 text-red-400 mx-auto mb-4" />
         <p className="text-red-600">{errorMsg}</p>
       </div>
     );

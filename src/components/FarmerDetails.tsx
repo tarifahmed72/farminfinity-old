@@ -294,7 +294,8 @@ const FarmerDetails: React.FC = () => {
                     <img
                       src={getImageUrl(bio.photo)}
                       alt={bio.name}
-                      className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover"
+                      className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={() => setSelectedImage(getImageUrl(bio.photo))}
                     />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-white/20 flex items-center justify-center">
@@ -442,7 +443,8 @@ const FarmerDetails: React.FC = () => {
                       <img
                         src={getImageUrl(bio.photo)}
                         alt="Farmer"
-                        className="w-48 h-48 object-cover rounded-lg shadow-sm"
+                        className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
+                        onClick={() => setSelectedImage(getImageUrl(bio.photo))}
                       />
                     </div>
                   </div>
@@ -846,7 +848,7 @@ const FarmerDetails: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'activities' && (
+            {activeTab === 'activities' && applicationId && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <FarmerKyc applicationId={applicationId} />
               </div>
