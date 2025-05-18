@@ -83,18 +83,23 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     );
   };
 
-  const renderImages = (images: string[], title: string) => {
-    if (!images?.length) return null;
+  const renderImages = (images: string | string[] | undefined, title: string) => {
+    if (!images || (Array.isArray(images) && !images.length)) return null;
+
+    // Convert to array if it's a string
+    const imageArray = typeof images === 'string' ? images.split(',').map(img => img.trim()) : images;
+
     return (
       <div className="mt-8">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">{title}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((img, idx) => (
+          {Array.isArray(imageArray) && imageArray.map((img: string, idx: number) => (
             <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all">
               <img
                 src={getImageUrl(img)}
                 alt={`${title} ${idx + 1}`}
                 className="w-full h-full object-cover hover:scale-105 transition-transform"
+                loading="lazy"
               />
             </div>
           ))}
@@ -255,8 +260,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             </div>
           )}
 
-          {renderImages(data.images, `${type} Images`)}
-
+          {/* Facility GPS image */}
           {data.facility_gps_image && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
@@ -264,6 +268,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
                 src={getImageUrl(data.facility_gps_image)}
                 alt="Facility GPS"
                 className="w-64 h-64 object-cover rounded-md shadow"
+                loading="lazy"
               />
             </div>
           )}
@@ -280,9 +285,19 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     // Show only Farming activities in primary tab
     if (activeTab === 'primary') {
       if (primary_activity_type.toLowerCase() === 'farming') {
-        return renderActivityDetails(primary_activity, primary_activity_type);
+        return (
+          <>
+            {renderActivityDetails(primary_activity, primary_activity_type)}
+            {primary_activity?.images && renderImages(primary_activity.images, `${primary_activity_type} Images`)}
+          </>
+        );
       } else if (secondary_activity_type?.toLowerCase() === 'farming') {
-        return renderActivityDetails(secondary_activity, secondary_activity_type);
+        return (
+          <>
+            {renderActivityDetails(secondary_activity, secondary_activity_type)}
+            {secondary_activity?.images && renderImages(secondary_activity.images, `${secondary_activity_type} Images`)}
+          </>
+        );
       } else {
         return (
           <div className="bg-gray-50 p-6 rounded-lg">
@@ -315,6 +330,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
           {nonFarmingActivities.map((activity, index) => (
             <div key={index}>
               {renderActivityDetails(activity.data, activity.type)}
+              {activity.data?.images && renderImages(activity.data.images, `${activity.type} Images`)}
             </div>
           ))}
         </div>
