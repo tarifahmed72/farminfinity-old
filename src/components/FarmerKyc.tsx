@@ -21,10 +21,10 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
 
   // Get token from localStorage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('keycloak-token');
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
-  const getImageUrl = (imagePath: string) => {
+  const getImageUrl = (imagePath: string): string => {
     if (!imagePath) return '';
     return `${baseUrl}${imagePath}?token=${token}`;
   };

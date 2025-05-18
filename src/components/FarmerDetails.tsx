@@ -146,10 +146,10 @@ const FarmerDetails: React.FC = () => {
   const imageBaseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
   // Get token from localStorage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('keycloak-token');
 
   // Function to get image URL with token
-  const getImageUrl = (imagePath: string | null | undefined) => {
+  const getImageUrl = (imagePath: string | null | undefined): string => {
     if (!imagePath) return '';
     return `${imageBaseUrl}${imagePath}?token=${token}`;
   };
