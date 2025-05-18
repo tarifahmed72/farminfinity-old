@@ -836,17 +836,22 @@ const FarmerDetails: React.FC = () => {
             {activeTab === 'scorecard' && (
               <div className="space-y-6">
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
-                  {farmerId && (
-                    <div className="mt-6">
-                      <ReportRemark 
-                        farmerId={farmerId} 
-                        applicationId={applicationId} 
-                        financialYear="2024-25" 
-                      />
-                    </div>
-                  )}
+                  <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-white">Score Card</h3>
+                  </div>
+                  <div className="p-6">
+                    <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
+                  </div>
                 </div>
+                {farmerId && (
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <ReportRemark 
+                      farmerId={farmerId} 
+                      applicationId={applicationId} 
+                      financialYear="2024-25" 
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
