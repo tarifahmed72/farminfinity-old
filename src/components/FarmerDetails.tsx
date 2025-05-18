@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
 import FarmerKyc from "./FarmerKyc";
 import ScoreCard from "./Scorecard";
+import ReportRemark from './ReportRemark';
 import { 
   FaUser, 
   FaIdCard, 
@@ -833,8 +834,15 @@ const FarmerDetails: React.FC = () => {
             )}
 
             {activeTab === 'scorecard' && (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
+                </div>
+                {farmerId && <ReportRemark 
+                  farmerId={farmerId} 
+                  applicationId={applicationId} 
+                  financialYear="2024-25" 
+                />}
               </div>
             )}
           </div>
