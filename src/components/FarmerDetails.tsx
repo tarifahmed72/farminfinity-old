@@ -211,8 +211,11 @@ const FarmerDetails: React.FC = () => {
 
   useEffect(() => {
     const fetchFarmerData = async () => {
-      if (!farmerId || !applicationId) return;
-      
+      if (!farmerId || !applicationId) {
+        setError('Missing farmerId or applicationId in the URL.');
+        console.error('Missing farmerId or applicationId:', { farmerId, applicationId });
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
@@ -221,15 +224,27 @@ const FarmerDetails: React.FC = () => {
         const bioHistoryResponse = await axiosInstance.get(
           `/bio-histories/${applicationId}?skip=0&limit=10`
         );
-
-        if (bioHistoryResponse.data && bioHistoryResponse.data.length > 0) {
-          const bio_version_id = bioHistoryResponse.data[0].bio_version_id;
-          const bioResponse = await axiosInstance.get(`/bio/${bio_version_id}`);
-          setBio(bioResponse.data);
+        console.log('Bio history response:', bioHistoryResponse.data);
+        if (!bioHistoryResponse.data || bioHistoryResponse.data.length === 0) {
+          setError('No bio history found for this application.');
+          return;
         }
+        const bio_version_id = bioHistoryResponse.data[0].bio_version_id;
+        const bioResponse = await axiosInstance.get(`/bio/${bio_version_id}`);
+        console.log('Bio response:', bioResponse.data);
+        if (!bioResponse.data) {
+          setError('No bio data found for this application.');
+          return;
+        }
+        setBio(bioResponse.data);
 
         // Fetch KYC
         const kycResponse = await axiosInstance.get(`/kyc-histories/${farmerId}`);
+        console.log('KYC response:', kycResponse.data);
+        if (!kycResponse.data || kycResponse.data.length === 0) {
+          setError('No KYC data found for this farmer.');
+          return;
+        }
         setKyc(kycResponse.data[0]);
 
         let poiData = null;
@@ -240,8 +255,16 @@ const FarmerDetails: React.FC = () => {
           const poiResponse = await axiosInstance.get(
             `/poi/${kycResponse.data[0].poi_version_id}`
           );
+          console.log('POI response:', poiResponse.data);
+          if (!poiResponse.data) {
+            setError('No POI data found for this farmer.');
+            return;
+          }
           poiData = poiResponse.data;
           setPoi(poiData);
+        } else {
+          setError('No POI version ID found in KYC data.');
+          return;
         }
 
         // Fetch POA
@@ -249,15 +272,23 @@ const FarmerDetails: React.FC = () => {
           const poaResponse = await axiosInstance.get(
             `/poa/${kycResponse.data[0].poa_version_id}`
           );
+          console.log('POA response:', poaResponse.data);
+          if (!poaResponse.data) {
+            setError('No POA data found for this farmer.');
+            return;
+          }
           poaData = poaResponse.data;
           setPoa(poaData);
+        } else {
+          setError('No POA version ID found in KYC data.');
+          return;
         }
 
         // Load signed URLs for POI and POA images
         await loadSignedUrls(poiData, poaData);
 
       } catch (err: any) {
-        setError('Failed to fetch data: ' + err.message);
+        setError('Failed to fetch data: ' + (err?.message || err));
         console.error('Fetch error:', err);
       } finally {
         setLoading(false);
