@@ -123,8 +123,6 @@ const Farmers = () => {
 
   const getStatusColor = (status: number) => {
     switch (status) {
-      case 1:
-        return 'bg-yellow-100 text-yellow-800';
       case 2:
         return 'bg-green-100 text-green-800';
       default:
@@ -134,12 +132,10 @@ const Farmers = () => {
 
   const getStatusText = (status: number) => {
     switch (status) {
-      case 1:
-        return 'Lead';
       case 2:
         return 'Submitted';
       default:
-        return 'Unknown';
+        return 'Leads';
     }
   };
 
@@ -253,7 +249,6 @@ const Farmers = () => {
                 disabled={loading}
               >
                 <option value="all">All Statuses</option>
-                <option value="1">Lead</option>
                 <option value="2">Submitted</option>
               </select>
             </div>
