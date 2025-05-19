@@ -14,6 +14,7 @@ interface FamilyMember {
   is_dependent: boolean;
   created_at: string;
   updated_at: string;
+  bio_id: string;
 }
 
 interface FamilyMembersProps {
@@ -138,12 +139,12 @@ export default function FamilyMembers({ bioId }: FamilyMembersProps) {
                   </div>
                   
                   <div className="space-y-2 text-sm text-gray-600">
-                    <p>Age: {member.age} years</p>
+                    <p>ID: {member.id}</p>
+                    <p>Bio ID: {member.bio_id}</p>
+                    <p>Name: {member.name}</p>
                     <p>Gender: {member.gender}</p>
-                    <p>Education: {member.education}</p>
-                    <p>Occupation: {member.occupation}</p>
-                    <p>Annual Income: ₹{member.annual_income !== undefined && member.annual_income !== null ? member.annual_income.toLocaleString() : 'N/A'}</p>
-                    <p>Dependent: {member.is_dependent ? 'Yes' : 'No'}</p>
+                    <p>Age: {member.age} years</p>
+                    <p>Relation: {member.relation}</p>
                   </div>
                 </div>
               ))}
