@@ -43,27 +43,12 @@ const FarmerApplication: React.FC = () => {
     navigate(`/farmers_details/farmerId/${farmerId}/applicationId/${appId}`);
   };
 
-  const formatStatus = (status: number) => {
-    switch (status) {
-      case 1:
-        return { 
-          label: 'Approved', 
-          className: 'bg-green-100 text-green-700',
-          borderColor: 'border-green-200'
-        };
-      case 2:
-        return { 
-          label: 'Rejected', 
-          className: 'bg-red-100 text-red-700',
-          borderColor: 'border-red-200'
-        };
-      default:
-        return { 
-          label: 'Pending', 
-          className: 'bg-yellow-100 text-yellow-700',
-          borderColor: 'border-yellow-200'
-        };
-    }
+  const formatStatus = () => {
+    return { 
+      label: 'Pending', 
+      className: 'bg-yellow-100 text-yellow-700',
+      borderColor: 'border-yellow-200'
+    };
   };
 
   if (loading) {
@@ -117,7 +102,7 @@ const FarmerApplication: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {applications.map((app) => {
-              const { label, className, borderColor } = formatStatus(app.status);
+              const { label, className, borderColor } = formatStatus();
               return (
                 <div
                   key={app.id}
