@@ -113,7 +113,7 @@ const FarmerDetails: React.FC = () => {
   const [poa, setPoa] = useState<POAData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'>('profile');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
@@ -305,7 +305,7 @@ const FarmerDetails: React.FC = () => {
   }, [bio?.photo]);
 
   const handleTabClick = (
-    tab: 'profile' | 'kyc' | 'activities' | 'scorecard'
+    tab: 'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'
   ) => {
     setActiveTab(tab);
   };
@@ -463,6 +463,7 @@ const FarmerDetails: React.FC = () => {
                 { id: 'kyc', label: 'KYC', icon: FaIdCard },
                 { id: 'activities', label: 'Activities', icon: FaClipboardList },
                 { id: 'scorecard', label: 'Score Card', icon: FaChartLine },
+                { id: 'remarks', label: 'Remarks', icon: FaClipboardList },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -767,12 +768,29 @@ const FarmerDetails: React.FC = () => {
                 {farmerId && (
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <ReportRemark 
-                      farmerId={farmerId} 
-                      applicationId={applicationId} 
+                      farmerId={farmerId || ''} 
+                      applicationId={applicationId || ''} 
                       financialYear="2024-25" 
                     />
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'remarks' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-white">Remarks</h3>
+                  </div>
+                  <div className="p-6">
+                    <ReportRemark 
+                      farmerId={farmerId || ''} 
+                      applicationId={applicationId || ''} 
+                      financialYear="2024-25" 
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
