@@ -765,15 +765,6 @@ const FarmerDetails: React.FC = () => {
                     <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
                   </div>
                 </div>
-                {farmerId && (
-                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <ReportRemark 
-                      farmerId={farmerId || ''} 
-                      applicationId={applicationId || ''} 
-                      financialYear="2024-25" 
-                    />
-                  </div>
-                )}
               </div>
             )}
 

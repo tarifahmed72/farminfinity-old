@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from '../utils/axios';
-import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
+import debounce from 'lodash/debounce';
 
 interface ApiFarmer {
   id: string;
@@ -37,7 +38,7 @@ interface PaginationResponse {
 
 const Farmers = () => {
   const [farmers, setFarmers] = useState<DisplayFarmer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,24 +49,22 @@ const Farmers = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const ITEMS_PER_PAGE = 20;
 
-  useEffect(() => {
-    const fetchFarmers = async () => {
+  // Create a debounced version of the fetch function
+  const debouncedFetch = useCallback(
+    debounce(async (query: string, status: string, page: number) => {
       try {
-        setLoading(true);
+        setSearchLoading(true);
         setError(null);
 
-        // Construct URL exactly as per API specification
-        let url = `/farmers/?page=${currentPage}&limit=${ITEMS_PER_PAGE}`;
+        let url = `/farmers/?page=${page}&limit=${ITEMS_PER_PAGE}`;
         
-        // Add filters as per API spec
-        if (searchQuery) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
+        if (query.trim()) {
+          url += `&search=${encodeURIComponent(query.trim())}`;
         }
-        if (selectedStatus !== 'all') {
-          url += `&status=${selectedStatus}`;
+        if (status !== 'all') {
+          url += `&status=${status}`;
         }
 
-        // Add authorization header
         const token = localStorage.getItem('keycloak-token');
         const response = await axiosInstance.get<PaginationResponse>(url, {
           headers: {
@@ -77,7 +76,6 @@ const Farmers = () => {
           throw new Error('Invalid response format from API');
         }
 
-        // Map the API response to our display format
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
           id: farmer.id,
           name: farmer.name || "N/A",
@@ -90,36 +88,27 @@ const Farmers = () => {
           amount: "N/A",
         }));
 
-        // Update state with new data and pagination info
         setFarmers(fetchedFarmers);
         setTotalItems(response.data.total);
-        
-        // Calculate total pages based on 20 items per page
-        const calculatedTotalPages = Math.ceil(response.data.total / ITEMS_PER_PAGE);
-        setTotalPages(calculatedTotalPages);
-
-        // Log pagination info for debugging
-        console.log('Pagination Info:', {
-          currentPage,
-          totalPages: calculatedTotalPages,
-          totalItems: response.data.total,
-          itemsPerPage: ITEMS_PER_PAGE,
-          fetchedItems: fetchedFarmers.length
-        });
-
-        // Clear error if successful
+        setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
         setError(error.response?.data?.detail || "Failed to fetch farmers data. Please try again.");
         setFarmers([]);
       } finally {
-        setLoading(false);
+        setSearchLoading(false);
       }
-    };
+    }, 300),
+    []
+  );
 
-    fetchFarmers();
-  }, [currentPage, searchQuery, selectedStatus]);
+  useEffect(() => {
+    debouncedFetch(searchQuery, selectedStatus, currentPage);
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [searchQuery, selectedStatus, currentPage, debouncedFetch]);
 
   const getStatusColor = (status: number) => {
     switch (status) {
@@ -141,7 +130,12 @@ const Farmers = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setCurrentPage(1);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -190,7 +184,7 @@ const Farmers = () => {
               ? 'bg-green-100 text-green-600'
               : 'text-gray-600 hover:bg-gray-100'
           }`}
-          disabled={loading}
+          disabled={searchLoading}
         >
           {i}
         </button>
@@ -207,7 +201,9 @@ const Farmers = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Farmers Directory</h1>
-            <p className="mt-1 text-sm text-gray-500">Manage and view all registered farmers</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {totalItems} farmers found
+            </p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -236,9 +232,22 @@ const Farmers = () => {
                 placeholder="Search by name or phone number"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                disabled={loading}
+                className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                disabled={searchLoading}
               />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-4 w-4" />
+                </button>
+              )}
+              {searchLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <FaSpinner className="h-4 w-4 animate-spin text-gray-400" />
+                </div>
+              )}
             </div>
             
             <div className="md:w-48">
@@ -246,7 +255,7 @@ const Farmers = () => {
                 value={selectedStatus}
                 onChange={handleStatusChange}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                disabled={loading}
+                disabled={searchLoading}
               >
                 <option value="all">All Statuses</option>
                 <option value="2">Submitted</option>
@@ -262,8 +271,23 @@ const Farmers = () => {
           </div>
         )}
 
+        {/* No results message */}
+        {!searchLoading && farmers.length === 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="flex flex-col items-center">
+              <FaSearch className="h-12 w-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No farmers found</h3>
+              <p className="text-gray-500">
+                {searchQuery 
+                  ? `No results found for "${searchQuery}". Try a different search term.`
+                  : "No farmers available in the system."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
-        {loading ? (
+        {searchLoading ? (
           <div className="flex flex-col items-center justify-center h-64">
             <FaSpinner className="h-8 w-8 animate-spin text-green-600 mb-4" />
             <p className="text-gray-600">Loading farmers...</p>
@@ -362,7 +386,7 @@ const Farmers = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrevPage}
-                  disabled={currentPage === 1 || loading}
+                  disabled={currentPage === 1 || searchLoading}
                   className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
                 >
                   <FaChevronLeft className="h-4 w-4" />
@@ -375,9 +399,9 @@ const Farmers = () => {
 
                 <button
                   onClick={handleNextPage}
-                  disabled={currentPage >= totalPages || loading}
+                  disabled={currentPage >= totalPages || searchLoading}
                   className={`flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium ${
-                    currentPage >= totalPages || loading
+                    currentPage >= totalPages || searchLoading
                       ? 'opacity-50 cursor-not-allowed'
                       : 'hover:bg-gray-50 cursor-pointer'
                   } transition-colors`}
