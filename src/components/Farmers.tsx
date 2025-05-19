@@ -127,8 +127,6 @@ const Farmers = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 2:
         return 'bg-green-100 text-green-800';
-      case 3:
-        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -139,9 +137,7 @@ const Farmers = () => {
       case 1:
         return 'Lead';
       case 2:
-        return 'Contacted';
-      case 3:
-        return 'Active';
+        return 'Submitted';
       default:
         return 'Unknown';
     }
@@ -258,8 +254,7 @@ const Farmers = () => {
               >
                 <option value="all">All Statuses</option>
                 <option value="1">Lead</option>
-                <option value="2">Contacted</option>
-                <option value="3">Active</option>
+                <option value="2">Submitted</option>
               </select>
             </div>
           </div>
