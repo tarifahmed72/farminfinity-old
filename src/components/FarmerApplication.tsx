@@ -39,7 +39,7 @@ const FarmerApplication: React.FC = () => {
     }
   }, [farmerId]);
 
-  const handleRowClick = (appId: string) => {
+  const handleRowClick = (appId: string, farmerId: string) => {
     navigate(`/farmers_details/farmerId/${farmerId}/applicationId/${appId}`);
   };
 
@@ -106,7 +106,7 @@ const FarmerApplication: React.FC = () => {
               return (
                 <div
                   key={app.id}
-                  onClick={() => handleRowClick(app.id)}
+                  onClick={() => handleRowClick(app.id, app.farmer_id)}
                   className={`bg-white rounded-xl shadow-sm border ${borderColor} hover:shadow-md transition-all cursor-pointer group overflow-hidden`}
                 >
                   <div className="p-6">
