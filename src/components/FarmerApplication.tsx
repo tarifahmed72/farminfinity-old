@@ -43,12 +43,25 @@ const FarmerApplication: React.FC = () => {
     navigate(`/farmers_details/farmerId/${farmerId}/applicationId/${appId}`);
   };
 
-  const formatStatus = () => {
-    return { 
-      label: 'Pending', 
-      className: 'bg-yellow-100 text-yellow-700',
-      borderColor: 'border-yellow-200'
-    };
+  const getAppStatusProps = (status: number) => {
+    switch (status) {
+      case 1:
+        return { label: 'Lead', bgColor: 'bg-yellow-300', foreColor: 'text-black' };
+      case 2:
+        return { label: 'Application Submitted', bgColor: 'bg-orange-400', foreColor: 'text-black' };
+      case 3:
+        return { label: 'Under Process', bgColor: 'bg-blue-500', foreColor: 'text-white' };
+      case 4:
+        return { label: 'Approved', bgColor: 'bg-green-500', foreColor: 'text-white' };
+      case 5:
+        return { label: 'Rejected', bgColor: 'bg-red-500', foreColor: 'text-white' };
+      case 6:
+        return { label: 'Disbursed', bgColor: 'bg-pink-300', foreColor: 'text-black' };
+      case 7:
+        return { label: 'Re-submit', bgColor: 'bg-violet-500', foreColor: 'text-white' };
+      default:
+        return { label: 'Unknown', bgColor: 'bg-gray-200', foreColor: 'text-black' };
+    }
   };
 
   if (loading) {
@@ -102,12 +115,12 @@ const FarmerApplication: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {applications.map((app) => {
-              const { label, className, borderColor } = formatStatus();
+              const { label, bgColor, foreColor } = getAppStatusProps(app.status);
               return (
                 <div
                   key={app.id}
                   onClick={() => handleRowClick(app.id, app.farmer_id)}
-                  className={`bg-white rounded-xl shadow-sm border ${borderColor} hover:shadow-md transition-all cursor-pointer group overflow-hidden`}
+                  className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all cursor-pointer group overflow-hidden`}
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -120,7 +133,7 @@ const FarmerApplication: React.FC = () => {
                           <h3 className="font-semibold text-gray-900">{app.application_no}</h3>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${className}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${bgColor} ${foreColor}`}>
                         {label}
                       </span>
                     </div>
