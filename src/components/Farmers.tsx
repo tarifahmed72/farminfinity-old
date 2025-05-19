@@ -125,8 +125,8 @@ const Farmers = () => {
     switch (status) {
       case 2:
         return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      default: // Leads
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-sm';
     }
   };
 
