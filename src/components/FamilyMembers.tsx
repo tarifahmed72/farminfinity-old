@@ -142,7 +142,7 @@ export default function FamilyMembers({ bioId }: FamilyMembersProps) {
                     <p>Gender: {member.gender}</p>
                     <p>Education: {member.education}</p>
                     <p>Occupation: {member.occupation}</p>
-                    <p>Annual Income: ₹{member.annual_income.toLocaleString()}</p>
+                    <p>Annual Income: ₹{member.annual_income !== undefined && member.annual_income !== null ? member.annual_income.toLocaleString() : 'N/A'}</p>
                     <p>Dependent: {member.is_dependent ? 'Yes' : 'No'}</p>
                   </div>
                 </div>

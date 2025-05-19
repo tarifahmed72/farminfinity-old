@@ -136,8 +136,8 @@ const FPO = () => {
               <div><strong>PAN Copy Collected:</strong> <span className="font-medium">{selectedFPO.is_pan_copy_collected ? 'Yes' : 'No'}</span></div>
               <div><strong>Registration No.:</strong> <span className="font-medium">{selectedFPO.registration_no}</span></div>
               <div><strong>Active:</strong> <span className={`font-medium ${selectedFPO.active ? 'text-green-600' : 'text-red-600'}`}>{selectedFPO.active ? 'Yes' : 'No'}</span></div>
-              <div><strong>Created At:</strong> <span className="font-medium">{new Date(selectedFPO.created_at).toLocaleString()}</span></div>
-              <div><strong>Updated At:</strong> <span className="font-medium">{new Date(selectedFPO.updated_at).toLocaleString()}</span></div>
+              <div><strong>Created At:</strong> <span className="font-medium">{selectedFPO.created_at ? new Date(selectedFPO.created_at).toLocaleString() : 'N/A'}</span></div>
+              <div><strong>Updated At:</strong> <span className="font-medium">{selectedFPO.updated_at ? new Date(selectedFPO.updated_at).toLocaleString() : 'N/A'}</span></div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
