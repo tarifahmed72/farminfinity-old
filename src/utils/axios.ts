@@ -18,10 +18,11 @@ const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
   },
-  timeout: 10000,
-  withCredentials: false
+  timeout: 30000, // Increased timeout
+  withCredentials: true // Enable credentials for CORS
 });
 
 // Request interceptor
@@ -36,6 +37,13 @@ axiosInstance.interceptors.request.use(
     if (access_token) {
       config.headers.Authorization = `Bearer ${access_token}`;
     }
+
+    // Log request for debugging
+    console.debug('API Request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    });
     
     return config;
   },
@@ -47,8 +55,24 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful response for debugging
+    console.debug('API Response:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   async (error) => {
+    // Log error details for debugging
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(new Error('Request timed out. Please try again.'));
     }
@@ -57,6 +81,7 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(new Error('Network error. Please check your connection and try again.'));
     }
 
+    // Handle 401 and token refresh
     if (error.response.status === 401 && !error.config._retry) {
       error.config._retry = true;
 
@@ -67,9 +92,13 @@ axiosInstance.interceptors.response.use(
           error.config.headers.Authorization = `Bearer ${access_token}`;
           return axiosInstance(error.config);
         }
+        // If refresh failed, redirect to login
+        window.location.href = '/login';
+        return Promise.reject(new Error('Session expired. Please login again.'));
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
         clearTokens();
+        window.location.href = '/login';
         return Promise.reject(new Error('Session expired. Please login again.'));
       }
     }
@@ -77,15 +106,15 @@ axiosInstance.interceptors.response.use(
     // Handle other common status codes
     switch (error.response.status) {
       case 400:
-        return Promise.reject(new Error(error.response.data.detail || 'Invalid request. Please check your input.'));
+        return Promise.reject(new Error(error.response.data?.detail || 'Invalid request. Please check your input.'));
       case 403:
         return Promise.reject(new Error('Access denied. You do not have permission to perform this action.'));
       case 404:
-        return Promise.reject(new Error('Resource not found.'));
+        return Promise.reject(new Error('Resource not found. The requested data might have been moved or deleted.'));
       case 500:
-        return Promise.reject(new Error('Server error. Please try again later.'));
+        return Promise.reject(new Error('Server error. Our team has been notified. Please try again later.'));
       default:
-        return Promise.reject(error);
+        return Promise.reject(error.response.data?.detail || error.message || 'An unexpected error occurred.');
     }
   }
 );
