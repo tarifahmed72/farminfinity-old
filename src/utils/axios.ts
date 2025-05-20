@@ -25,6 +25,7 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json'
   },
+  timeout: 10000, // Global 10 second timeout
   withCredentials: false // Disable credentials for cross-origin requests
 });
 
@@ -44,6 +45,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -52,30 +54,57 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    // Log error details for debugging
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
 
-    // If the error is 401 and we haven't tried to refresh the token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(new Error('Request timed out. Please try again.'));
+    }
+
+    // Handle network errors
+    if (!error.response) {
+      return Promise.reject(new Error('Network error. Please check your connection and try again.'));
+    }
+
+    // Handle 401 and token refresh
+    if (error.response.status === 401 && !error.config._retry) {
+      error.config._retry = true;
 
       try {
-        // Try to refresh the token
         const refreshed = await refreshAccessToken();
         
         if (refreshed) {
-          // If refresh successful, retry the original request
           const { access_token } = getTokens();
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return axiosInstance(originalRequest);
+          error.config.headers.Authorization = `Bearer ${access_token}`;
+          return axiosInstance(error.config);
         }
       } catch (refreshError) {
-        // If refresh fails, clear tokens and reject
+        console.error('Token refresh failed:', refreshError);
         clearTokens();
-        return Promise.reject(refreshError);
+        return Promise.reject(new Error('Session expired. Please login again.'));
       }
     }
 
-    return Promise.reject(error);
+    // Handle other common status codes
+    switch (error.response.status) {
+      case 400:
+        return Promise.reject(new Error(error.response.data.detail || 'Invalid request. Please check your input.'));
+      case 403:
+        return Promise.reject(new Error('Access denied. You do not have permission to perform this action.'));
+      case 404:
+        return Promise.reject(new Error('Resource not found.'));
+      case 500:
+        return Promise.reject(new Error('Server error. Please try again later.'));
+      default:
+        return Promise.reject(error);
+    }
   }
 );
 
