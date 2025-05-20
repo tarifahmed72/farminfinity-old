@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { setTokens } from '../utils/auth';
 import axios from 'axios';
 
+const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
+
 export default function LoginAdmin() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
@@ -16,24 +18,17 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      // Create form data with exact parameter names
+      // Create form data with exact parameter names - matching Dart implementation
       const formData = new URLSearchParams();
-      formData.append('grant_type', 'password');
       formData.append('username', username);
       formData.append('password', password);
 
       const response = await axios.post(
-        'https://dev-api.farmeasytechnologies.com/api/login',
+        `${BASE_URL}/login`,
         formData,
         {
           headers: {
-            'Accept': '*/*',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'en-US,en;q=0.9',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Origin': 'https://farmin.vercel.app',
-            'Host': 'dev-api.farmeasytechnologies.com',
-            'Connection': 'keep-alive'
           }
         }
       );
