@@ -1,20 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from '../utils/axios';
 import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
-
-interface ApiFarmer {
-  id: string;
-  farmer_id: string;
-  phone_no: string;
-  referral_id: string | null;
-  name: string | null;
-  village: string | null;
-  status: number | null;
-  created_at: string;
-  updated_at: string;
-}
+import { getTokens } from '../utils/auth';
 
 interface DisplayFarmer {
   id: string;
@@ -26,14 +14,6 @@ interface DisplayFarmer {
   createdOn: string;
   approval: string;
   amount: string;
-}
-
-interface PaginationResponse {
-  data: ApiFarmer[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
 }
 
 const Farmers = () => {
@@ -65,32 +45,25 @@ const Farmers = () => {
           url += `&status=${status}`;
         }
 
-        const token = localStorage.getItem('keycloak-token');
-        const response = await axiosInstance.get<PaginationResponse>(url, {
+        const { access_token } = getTokens();
+        if (!access_token) {
+          throw new Error('No access token found');
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/farmers`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${access_token}`
           }
         });
 
-        if (!response.data || !Array.isArray(response.data.data)) {
-          throw new Error('Invalid response format from API');
+        if (!response.ok) {
+          throw new Error('Failed to fetch farmers');
         }
 
-        const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
-          id: farmer.id,
-          name: farmer.name || "N/A",
-          phone: farmer.phone_no,
-          city: farmer.village || "N/A",
-          status: farmer.status || 0,
-          gender: "N/A",
-          createdOn: new Date(farmer.created_at).toLocaleDateString(),
-          approval: "N/A",
-          amount: "N/A",
-        }));
-
-        setFarmers(fetchedFarmers);
-        setTotalItems(response.data.total);
-        setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
+        const data = await response.json();
+        setFarmers(data.farmers);
+        setTotalItems(data.total);
+        setTotalPages(Math.ceil(data.total / ITEMS_PER_PAGE));
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);

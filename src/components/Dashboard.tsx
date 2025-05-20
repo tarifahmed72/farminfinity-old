@@ -1,35 +1,36 @@
-import  { useState, useEffect } from "react";
-
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getTokens } from '../utils/auth';
 
 const Dashboard = () => {
-
-  
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [farmerCount, setFarmerCount] = useState<number | null>(25);
   const [fpoCount, setFpoCount] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initKeycloak = async () => {
+    const fetchData = async () => {
       try {
-       
-        const token = localStorage.getItem("keycloak-token")
+        const { access_token } = getTokens();
+        if (!access_token) {
+          throw new Error('No access token found');
+        }
 
         // Fetch counts
         const [farmers, fpos, agents] = await Promise.all([
           fetch("https://dev-api.farmeasytechnologies.com/api/farmers/?page=1&limit=1", {
             method: "GET",
             headers: {
-              "Authorization": `Bearer ${token}`,
+              "Authorization": `Bearer ${access_token}`,
               "Content-Type": "application/json",
             },
-          }).then(res => res.json()), // <-- COMMA here, not semicolon
+          }).then(res => res.json()),
           
           fetch("https://dev-api.farmeasytechnologies.com/api/fpos/?skip=0&limit=1000", {
             method: "GET",
             headers: {
-              "Authorization": `Bearer ${token}`,
+              "Authorization": `Bearer ${access_token}`,
               "Content-Type": "application/json",
             },
           }).then(res => res.json()),
@@ -37,37 +38,34 @@ const Dashboard = () => {
           fetch("https://dev-api.farmeasytechnologies.com/api/field_agents/?skip=0&limit=1000", {
             method: "GET",
             headers: {
-              "Authorization": `Bearer ${token}`,
+              "Authorization": `Bearer ${access_token}`,
               "Content-Type": "application/json",
             },
           }).then(res => res.json()),
         ]);
         
-        console.log(farmers)
         setFarmerCount(farmers.total || 0);
-        console.log(fpos)
         setFpoCount(fpos.length || 0);
-        console.log(agents)
         setAgentCount(agents.length || 0);
       } catch (error) {
-        console.error("Failed to initialize Keycloak or fetch data:", error);
+        console.error("Failed to fetch data:", error);
+        navigate('/login');
       } finally {
         setLoading(false);
       }
     };
 
-   initKeycloak()
-  }, []);
+    fetchData();
+  }, [navigate]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
-  
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-4xl mx-auto">

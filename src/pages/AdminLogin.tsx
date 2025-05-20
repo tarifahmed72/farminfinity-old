@@ -15,18 +15,16 @@ export default function AdminLogin() {
       setLoading(true);
       setError('');
 
-      // Create form data
-      const formData = new URLSearchParams();
-      formData.append('username', username);
-      formData.append('password', password);
-
       const response = await fetch('https://dev-api.farmeasytechnologies.com/api/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'accept': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: formData
+        body: JSON.stringify({
+          username,
+          password,
+          user_type: "ADMIN"
+        }),
       });
 
       const data = await response.json();
