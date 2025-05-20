@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
 import FarmerKyc from "./FarmerKyc";
@@ -19,7 +19,6 @@ import {
   FaCalendarAlt,
   FaVenusMars,
   FaIdBadge,
-  FaSignOutAlt,
   FaSearch,
   FaHome
 } from 'react-icons/fa';
@@ -106,7 +105,6 @@ interface POAData {
 
 const FarmerDetails: React.FC = () => {
   const { farmerId, applicationId } = useParams<{ farmerId: string; applicationId: string }>();
-  const navigate = useNavigate();
   const [bio, setBio] = useState<Bio | null>(null);
   const [kyc, setKyc] = useState<KYCData | null>(null);
   const [poi, setPoi] = useState<POIData | null>(null);
@@ -392,14 +390,6 @@ const FarmerDetails: React.FC = () => {
     setActiveTab(tab);
   };
 
-  const handleLogout = () => {
-    // Clear token and any other stored data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Redirect to login page
-    navigate('/login');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -463,7 +453,7 @@ const FarmerDetails: React.FC = () => {
         <div className="mb-8">
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <div className="flex items-center space-x-4">
                   {bio?.photo ? (
                     <img
@@ -485,13 +475,6 @@ const FarmerDetails: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
-                >
-                  <FaSignOutAlt className="mr-2" />
-                  Logout
-                </button>
               </div>
             </div>
 
