@@ -1,10 +1,18 @@
 import axios, { AxiosRequestHeaders } from 'axios';
 import keycloak from '../keycloak';
 
+// Ensure URL is HTTPS
+const normalizeUrl = (url: string) => {
+  if (url.startsWith('http://')) {
+    return url.replace('http://', 'https://');
+  }
+  return url;
+};
+
 // Use proxy in development, direct URL in production
 const BASE_URL = import.meta.env.DEV 
   ? '/api'  // This will use the Vite proxy
-  : 'https://dev-api.farmeasytechnologies.com/api';
+  : normalizeUrl('https://dev-api.farmeasytechnologies.com/api');
 
 // Ensure the base URL is always HTTPS in production
 if (!import.meta.env.DEV && !BASE_URL.startsWith('https://')) {
@@ -24,8 +32,14 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   async (config) => {
     // Ensure HTTPS in production
-    if (!import.meta.env.DEV && config.url && !config.url.startsWith('https://') && !config.url.startsWith('/')) {
-      config.url = `https://${config.url}`;
+    if (!import.meta.env.DEV) {
+      // Force HTTPS for all URLs
+      if (config.url) {
+        config.url = normalizeUrl(config.url);
+      }
+      if (config.baseURL) {
+        config.baseURL = normalizeUrl(config.baseURL);
+      }
     }
 
     // Skip token for public endpoints
