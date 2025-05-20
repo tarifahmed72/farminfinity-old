@@ -48,7 +48,7 @@ const Farmers = () => {
         setSearchLoading(true);
         setError(null);
 
-        let url = `/farmers/?page=${page}&limit=${ITEMS_PER_PAGE}`;
+        let url = `/farmers?page=${page}&limit=${ITEMS_PER_PAGE}`;
         
         if (query.trim()) {
           url += `&search=${encodeURIComponent(query.trim())}`;
@@ -57,24 +57,24 @@ const Farmers = () => {
           url += `&status=${status}`;
         }
 
-        const response = await axiosInstance.get('/farmers');
+        const response = await axiosInstance.get(url);
 
         // Adjust the data mapping to match the API response structure
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
           id: farmer.id,
-          name: farmer.name || "N/A", // Handle cases where name is null
-          gender: "N/A", // Gender is not present in the API response
+          name: farmer.name || "N/A",
+          gender: "N/A",
           phone: farmer.phone_no,
-          city: farmer.village || "N/A", // Assuming 'village' maps to city
-          createdOn: new Date(farmer.created_at).toLocaleDateString(), // Format the date
-          status: getStatusText(farmer.status), // Function to convert status code to text
-          approval: "N/A", // Approval is not present in the API response
-          amount: "N/A", // Amount is not present in the API response
+          city: farmer.village || "N/A",
+          createdOn: new Date(farmer.created_at).toLocaleDateString(),
+          status: getStatusText(farmer.status),
+          approval: "N/A",
+          amount: "N/A",
         }));
 
-        setFarmers([...farmers, ...fetchedFarmers]);
-        setTotalItems(response.data.total);
-        setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
+        setFarmers(fetchedFarmers);
+        setTotalItems(response.data.total || 0);
+        setTotalPages(Math.ceil((response.data.total || 0) / ITEMS_PER_PAGE));
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
@@ -84,11 +84,16 @@ const Farmers = () => {
         setSearchLoading(false);
       }
     }, 300),
-    [farmers]
+    []
   );
 
   useEffect(() => {
-    debouncedFetch(searchQuery, selectedStatus, currentPage);
+    const fetchData = () => {
+      debouncedFetch(searchQuery, selectedStatus, currentPage);
+    };
+    
+    fetchData();
+
     return () => {
       debouncedFetch.cancel();
     };
