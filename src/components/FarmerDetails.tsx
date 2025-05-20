@@ -24,10 +24,6 @@ import {
   FaHome
 } from 'react-icons/fa';
 
-interface ImagePath extends String {
-  __brand: 'ImagePath';
-}
-
 interface Bio {
   id?: string;
   name?: string;
