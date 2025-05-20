@@ -1,5 +1,5 @@
-import axios, { AxiosRequestHeaders } from 'axios';
-import keycloak from '../keycloak';
+import axios from 'axios';
+import { getTokens, refreshAccessToken, clearTokens } from './auth';
 
 // Ensure URL is HTTPS
 const normalizeUrl = (url: string) => {
@@ -28,60 +28,13 @@ const axiosInstance = axios.create({
   withCredentials: false // Disable credentials for cross-origin requests
 });
 
-// Add a request interceptor
+// Request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
-    // Ensure HTTPS in production
-    if (!import.meta.env.DEV) {
-      // Force HTTPS for all URLs
-      if (config.url) {
-        config.url = normalizeUrl(config.url);
-      }
-      if (config.baseURL) {
-        config.baseURL = normalizeUrl(config.baseURL);
-      }
+    const { access_token } = getTokens();
+    if (access_token) {
+      config.headers.Authorization = `Bearer ${access_token}`;
     }
-
-    // Skip token for public endpoints
-    if (config.url?.includes('/send-otp') || config.url?.includes('/verify-otp')) {
-      return config;
-    }
-
-    try {
-      // Check if token needs refresh
-      const tokenExpired = keycloak.isTokenExpired();
-      if (tokenExpired) {
-        const refreshed = await keycloak.updateToken(5);
-        if (refreshed) {
-          localStorage.setItem('keycloak-token', keycloak.token || '');
-        }
-      }
-
-      // Get the current valid token
-      const token = keycloak.token || localStorage.getItem('keycloak-token');
-      
-      if (token) {
-        if (config.headers) {
-          (config.headers as AxiosRequestHeaders).Authorization = `Bearer ${token}`;
-        } else {
-          config.headers = {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          } as AxiosRequestHeaders;
-        }
-      } else {
-        // Redirect to login if no token available
-        window.location.href = '/login';
-        return Promise.reject('No valid token available');
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      // Redirect to login on token refresh failure
-      window.location.href = '/login';
-      return Promise.reject(error);
-    }
-
     return config;
   },
   (error) => {
@@ -89,32 +42,33 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add a response interceptor
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const originalRequest = error.config;
+
+    // If the error is 401 and we haven't tried to refresh the token yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
       try {
         // Try to refresh the token
-        const refreshed = await keycloak.updateToken(5);
+        const refreshed = await refreshAccessToken();
+        
         if (refreshed) {
-          // Token refreshed successfully, retry the original request
-          const token = keycloak.token;
-          localStorage.setItem('keycloak-token', token || '');
-          if (error.config.headers) {
-            (error.config.headers as AxiosRequestHeaders).Authorization = `Bearer ${token}`;
-          }
-          return axiosInstance(error.config);
+          // If refresh successful, retry the original request
+          const { access_token } = getTokens();
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
+        // If refresh fails, clear tokens and reject
+        clearTokens();
+        return Promise.reject(refreshError);
       }
-      
-      // If refresh failed or not possible, redirect to login
-      localStorage.removeItem('keycloak-token');
-      localStorage.removeItem('keycloak-refresh-token');
-      window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
