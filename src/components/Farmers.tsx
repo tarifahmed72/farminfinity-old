@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes, FaCalendarAlt, FaMapMarkerAlt, FaPhone, FaSortAmountDown, FaSync } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import axiosInstance from '../utils/axios';
-import { isAuthenticated, getUserType } from '../utils/auth';
+import { isAuthenticated, getUserType, refreshAccessToken } from '../utils/auth';
 
 interface ApiFarmer {
   id: string;
@@ -25,6 +25,7 @@ interface DisplayFarmer {
   status: number;
   gender: string;
   createdOn: string;
+  createdAt: Date;
   approval: string;
   amount: string;
 }
@@ -42,19 +43,51 @@ const Farmers = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const ITEMS_PER_PAGE = 20;
 
-  // Check authentication on mount
+  // Check authentication on mount and handle refresh
   useEffect(() => {
-    if (!isAuthenticated()) {
-      navigate('/');
-      return;
-    }
+    const checkAuthAndFetch = async () => {
+      if (!isAuthenticated()) {
+        try {
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            navigate('/');
+            return;
+          }
+        } catch (error) {
+          navigate('/');
+          return;
+        }
+      }
 
-    const userType = getUserType();
-    if (!userType || !['ADMIN', 'AGENT'].includes(userType)) {
-      navigate('/');
-      return;
-    }
+      const userType = getUserType();
+      if (!userType || !['ADMIN', 'AGENT'].includes(userType)) {
+        navigate('/');
+        return;
+      }
+
+      // Initial data fetch
+      fetchData();
+    };
+
+    checkAuthAndFetch();
   }, [navigate]);
+
+  // Separate fetchData function for reusability
+  const fetchData = () => {
+    debouncedFetch(searchQuery, selectedStatus, currentPage);
+  };
+
+  // Add refresh handler
+  const handleRefresh = async () => {
+    try {
+      setSearchLoading(true);
+      setError(null);
+      await fetchData();
+    } catch (error) {
+      console.error('Refresh error:', error);
+      setError('Failed to refresh data. Please try again.');
+    }
+  };
 
   // Create a debounced version of the fetch function
   const debouncedFetch = useCallback(
@@ -63,7 +96,16 @@ const Farmers = () => {
         setSearchLoading(true);
         setError(null);
 
-        let url = `/farmers?page=${page}&limit=${ITEMS_PER_PAGE}`;
+        // Check authentication before making the request
+        if (!isAuthenticated()) {
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            navigate('/');
+            return;
+          }
+        }
+
+        let url = `/farmers?page=${page}&limit=${ITEMS_PER_PAGE}&sort=created_at:desc`;
         
         if (query.trim()) {
           url += `&search=${encodeURIComponent(query.trim())}`;
@@ -79,7 +121,7 @@ const Farmers = () => {
         const response = await axiosInstance.get(url);
         
         if (import.meta.env.DEV) {
-          console.debug('Farmers response:', response.data);
+          console.debug('API Response:', response.data);
         }
 
         if (!response.data || !Array.isArray(response.data.data)) {
@@ -93,22 +135,36 @@ const Farmers = () => {
           phone: farmer.phone_no,
           city: farmer.village || "N/A",
           createdOn: new Date(farmer.created_at).toLocaleDateString(),
+          createdAt: new Date(farmer.created_at),
           status: farmer.status || 0,
           approval: "N/A",
           amount: "N/A",
         }));
 
-        setFarmers(fetchedFarmers);
+        // Sort farmers by creation date (newest first)
+        const sortedFarmers = fetchedFarmers.sort((a: DisplayFarmer, b: DisplayFarmer) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        setFarmers(sortedFarmers);
         setTotalItems(response.data.total || 0);
         setTotalPages(Math.ceil((response.data.total || 0) / ITEMS_PER_PAGE));
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
         
-        // Handle specific error cases
         if (error.response?.status === 401) {
-          setError('Your session has expired. Please login again.');
-          navigate('/');
+          try {
+            const refreshed = await refreshAccessToken();
+            if (!refreshed) {
+              setError('Your session has expired. Please login again.');
+              navigate('/');
+              return;
+            }
+            // Retry the fetch after successful token refresh
+            fetchData();
+          } catch (refreshError) {
+            setError('Your session has expired. Please login again.');
+            navigate('/');
+          }
         } else if (error.response?.status === 403) {
           setError('You do not have permission to view farmers.');
           navigate('/');
@@ -251,6 +307,115 @@ const Farmers = () => {
     return pages;
   };
 
+  const renderGridView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {farmers.map((farmer) => (
+        <div
+          key={farmer.id}
+          onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
+          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden group"
+        >
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                  <FaUser className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 group-hover:text-green-600 transition-colors">{farmer.name}</h3>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <FaPhone className="h-3 w-3 mr-1" />
+                    <span>{farmer.phone}</span>
+                  </div>
+                </div>
+              </div>
+              <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
+                {getStatusText(farmer.status)}
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center text-sm text-gray-600">
+                <FaMapMarkerAlt className="h-4 w-4 text-gray-400 mr-2" />
+                <span>{farmer.city}</span>
+              </div>
+              <div className="flex items-center text-sm text-gray-600">
+                <FaCalendarAlt className="h-4 w-4 text-gray-400 mr-2" />
+                <span>Created on {farmer.createdOn}</span>
+              </div>
+              {farmer.amount !== "N/A" && (
+                <div className="flex items-center text-sm font-medium text-green-600">
+                  <span>₹ {farmer.amount}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderListView = () => (
+    <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+      <table className="w-full text-sm text-left bg-white">
+        <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
+          <tr>
+            <th className="px-6 py-4">Name</th>
+            <th className="px-6 py-4">Phone</th>
+            <th className="px-6 py-4">Location</th>
+            <th className="px-6 py-4">
+              <div className="flex items-center gap-1">
+                Created On
+                <FaSortAmountDown className="h-3 w-3 text-gray-400" />
+              </div>
+            </th>
+            <th className="px-6 py-4">Status</th>
+            <th className="px-6 py-4">Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {farmers.map((farmer) => (
+            <tr
+              key={farmer.id}
+              onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
+              className="hover:bg-gray-50 cursor-pointer transition-all group"
+            >
+              <td className="px-6 py-4">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <FaUser className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-medium text-gray-900 group-hover:text-green-600 transition-colors">{farmer.name}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-blue-600">{farmer.phone}</td>
+              <td className="px-6 py-4">
+                <div className="flex items-center text-gray-600">
+                  <FaMapMarkerAlt className="h-4 w-4 text-gray-400 mr-1" />
+                  {farmer.city}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center text-gray-600">
+                  <FaCalendarAlt className="h-4 w-4 text-gray-400 mr-1" />
+                  {farmer.createdOn}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
+                  {getStatusText(farmer.status)}
+                </span>
+              </td>
+              <td className="px-6 py-4 font-medium text-gray-900">{farmer.amount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -259,11 +424,18 @@ const Farmers = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Farmers Directory</h1>
             <p className="mt-1 text-sm text-gray-500">
-              {totalItems} farmers found
+              {totalItems} farmers found • Sorted by newest first
             </p>
           </div>
           
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-500 focus:outline-none"
+              disabled={searchLoading}
+            >
+              <FaSync className={`h-5 w-5 ${searchLoading ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-500'}`}
@@ -351,86 +523,7 @@ const Farmers = () => {
           </div>
         ) : (
           <>
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {farmers.map((farmer) => (
-                  <div
-                    key={farmer.id}
-                    onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                            <FaUser className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{farmer.name}</h3>
-                            <p className="text-sm text-gray-500">{farmer.phone}</p>
-                          </div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
-                          {getStatusText(farmer.status)}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Location</span>
-                          <span className="text-gray-900">{farmer.city}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Created</span>
-                          <span className="text-gray-900">{farmer.createdOn}</span>
-                        </div>
-                        {farmer.amount !== "N/A" && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Loan Amount</span>
-                            <span className="text-gray-900">{farmer.amount}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
-                <table className="w-full text-sm text-left bg-white">
-                  <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
-                    <tr>
-                      <th className="px-6 py-4">Name</th>
-                      <th className="px-6 py-4">Phone</th>
-                      <th className="px-6 py-4">Location</th>
-                      <th className="px-6 py-4">Created On</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {farmers.map((farmer) => (
-                      <tr
-                        key={farmer.id}
-                        onClick={() => navigate(`/farmers_applications/${farmer.id}`)}
-                        className="hover:bg-gray-50 cursor-pointer border-t border-gray-100"
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900">{farmer.name}</td>
-                        <td className="px-6 py-4 text-blue-600">{farmer.phone}</td>
-                        <td className="px-6 py-4 text-gray-600">{farmer.city}</td>
-                        <td className="px-6 py-4 text-gray-600">{farmer.createdOn}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(farmer.status)}`}>
-                            {getStatusText(farmer.status)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">{farmer.amount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {viewMode === 'grid' ? renderGridView() : renderListView()}
 
             {/* Pagination */}
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">

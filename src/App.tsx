@@ -13,16 +13,27 @@ import FarmerApplication from "./components/FarmerApplication";
 import Home from './pages/Home';
 import AgentLogin from './pages/AgentLogin';
 import AdminLogin from './pages/AdminLogin';
+import { isAuthenticated, getUserType, refreshAccessToken } from './utils/auth';
+import { useEffect } from 'react';
 
-// Protected Route component
+// Protected Route component with improved auth handling
 const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { children: React.ReactNode, allowedUserTypes?: string[] }) => {
-  const token = localStorage.getItem('access_token');
-  const userType = localStorage.getItem('user_type');
+  useEffect(() => {
+    // Try to refresh token on protected route mount
+    const tryRefreshToken = async () => {
+      if (!isAuthenticated()) {
+        await refreshAccessToken();
+      }
+    };
+    tryRefreshToken();
+  }, []);
 
-  if (!token) {
+  // Check authentication using the auth utility
+  if (!isAuthenticated()) {
     return <Navigate to="/" replace />;
   }
 
+  const userType = getUserType();
   if (!userType || !allowedUserTypes.includes(userType)) {
     // If user type is not allowed, redirect to appropriate dashboard
     if (userType === 'ADMIN') {
@@ -39,7 +50,12 @@ const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { c
 
 // Layout for authenticated pages with sidebar and header
 const DashboardLayout = () => {
-  const userType = localStorage.getItem('user_type');
+  const userType = getUserType();
+  
+  // If not authenticated, redirect to home
+  if (!isAuthenticated()) {
+    return <Navigate to="/" replace />;
+  }
   
   return (
     <div className="flex min-h-screen">
