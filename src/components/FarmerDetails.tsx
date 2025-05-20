@@ -118,54 +118,35 @@ const FarmerDetails: React.FC = () => {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
-  const token = localStorage.getItem('token');
 
-  const getImageUrl = (imagePath: string | null | undefined): string => {
+  const getImageUrl = async (imagePath: string | null | undefined): Promise<string> => {
     if (!imagePath) return '';
     
-    // Log for debugging
-    console.log('Image Path:', imagePath);
-    console.log('Token:', token);
-    
-    // First check if we have a signed URL
+    // First check if we have a cached signed URL
     if (signedUrls[imagePath]) {
-      console.log('Using signed URL:', signedUrls[imagePath]);
       return signedUrls[imagePath];
     }
     
-    // Fallback to token-based URL
-    const url = `${baseUrl}${imagePath}?token=${token}`;
-    console.log('Using token-based URL:', url);
-    return url;
-  };
-
-  const getSignedUrl = async (filename: string) => {
     try {
-      console.log('Fetching signed URL for:', filename);
+      // Get a new signed URL
       const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${filename}`
+        `/gcs-get-signed-image-url/${encodeURIComponent(imagePath)}`
       );
-      console.log('Signed URL response:', response.data);
-      return response.data.signed_url;
+      
+      const newSignedUrl = response.data.signed_url;
+      
+      // Cache the signed URL
+      setSignedUrls(prev => ({
+        ...prev,
+        [imagePath]: newSignedUrl
+      }));
+      
+      return newSignedUrl;
     } catch (error) {
-      console.error('Error fetching signed URL:', error);
-      return null;
-    }
-  };
-
-  const loadProfilePhotoUrl = async (photoUrl: string | null | undefined) => {
-    if (!photoUrl || signedUrls[photoUrl]) return;
-    
-    try {
-      const signedUrl = await getSignedUrl(photoUrl);
-      if (signedUrl) {
-        setSignedUrls(prev => ({
-          ...prev,
-          [photoUrl]: signedUrl
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading profile photo signed URL:', error);
+      console.error('Error getting signed URL:', error);
+      // Fallback to token-based URL if signed URL fails
+      const token = localStorage.getItem('keycloak-token');
+      return `${baseUrl}${imagePath}?token=Bearer ${token}`;
     }
   };
 
@@ -175,7 +156,7 @@ const FarmerDetails: React.FC = () => {
     // Helper function to add image to promises
     const addImageToPromises = (image: string | null | undefined) => {
       if (image && !signedUrls[image]) {
-        urlPromises.set(image, getSignedUrl(image));
+        urlPromises.set(image, getImageUrl(image));
       }
     };
 
@@ -300,7 +281,7 @@ const FarmerDetails: React.FC = () => {
 
   useEffect(() => {
     if (bio?.photo) {
-      loadProfilePhotoUrl(bio.photo);
+      getImageUrl(bio.photo);
     }
   }, [bio?.photo]);
 
@@ -385,10 +366,10 @@ const FarmerDetails: React.FC = () => {
                 <div className="flex items-center space-x-4">
                   {bio?.photo ? (
                     <img
-                      src={bio.photo ? (signedUrls[bio.photo] || getImageUrl(bio.photo)) : ''}
+                      src={signedUrls[bio.photo] || ''}
                       alt={bio.name}
                       className="h-20 w-20 rounded-full border-4 border-white shadow-md object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-                      onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo] || getImageUrl(bio.photo))}
+                      onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo])}
                     />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-white/20 flex items-center justify-center">
@@ -535,10 +516,10 @@ const FarmerDetails: React.FC = () => {
                     </div>
                     <div className="ml-14">
                       <img
-                        src={bio.photo ? (signedUrls[bio.photo] || getImageUrl(bio.photo)) : ''}
+                        src={signedUrls[bio.photo] || ''}
                         alt="Farmer"
                         className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
-                        onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo] || getImageUrl(bio.photo))}
+                        onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo])}
                       />
                     </div>
                   </div>
@@ -641,10 +622,16 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-700">Front Side</p>
                                 <div className="relative group">
                                   <img
-                                    src={getImageUrl(poi.poi_image_front_url)}
+                                    src={signedUrls[poi.poi_image_front_url] || ''}
                                     alt="POI Front"
                                     className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_front_url))}
+                                    onClick={() => poi.poi_image_front_url && setSelectedImage(signedUrls[poi.poi_image_front_url])}
+                                    onError={async (e) => {
+                                      if (poi.poi_image_front_url) {
+                                        const url = await getImageUrl(poi.poi_image_front_url);
+                                        (e.target as HTMLImageElement).src = url;
+                                      }
+                                    }}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
@@ -659,10 +646,16 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-700">Back Side</p>
                                 <div className="relative group">
                                   <img
-                                    src={getImageUrl(poi.poi_image_back_url)}
+                                    src={signedUrls[poi.poi_image_back_url] || ''}
                                     alt="POI Back"
                                     className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => setSelectedImage(getImageUrl(poi.poi_image_back_url))}
+                                    onClick={() => poi.poi_image_back_url && setSelectedImage(signedUrls[poi.poi_image_back_url])}
+                                    onError={async (e) => {
+                                      if (poi.poi_image_back_url) {
+                                        const url = await getImageUrl(poi.poi_image_back_url);
+                                        (e.target as HTMLImageElement).src = url;
+                                      }
+                                    }}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
@@ -702,10 +695,16 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-700">Front Side</p>
                                 <div className="relative group">
                                   <img
-                                    src={getImageUrl(poa.poa_image_front_url)}
+                                    src={signedUrls[poa.poa_image_front_url] || ''}
                                     alt="POA Front"
                                     className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_front_url))}
+                                    onClick={() => poa.poa_image_front_url && setSelectedImage(signedUrls[poa.poa_image_front_url])}
+                                    onError={async (e) => {
+                                      if (poa.poa_image_front_url) {
+                                        const url = await getImageUrl(poa.poa_image_front_url);
+                                        (e.target as HTMLImageElement).src = url;
+                                      }
+                                    }}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
@@ -720,10 +719,16 @@ const FarmerDetails: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-700">Back Side</p>
                                 <div className="relative group">
                                   <img
-                                    src={getImageUrl(poa.poa_image_back_url)}
+                                    src={signedUrls[poa.poa_image_back_url] || ''}
                                     alt="POA Back"
                                     className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => setSelectedImage(getImageUrl(poa.poa_image_back_url))}
+                                    onClick={() => poa.poa_image_back_url && setSelectedImage(signedUrls[poa.poa_image_back_url])}
+                                    onError={async (e) => {
+                                      if (poa.poa_image_back_url) {
+                                        const url = await getImageUrl(poa.poa_image_back_url);
+                                        (e.target as HTMLImageElement).src = url;
+                                      }
+                                    }}
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />

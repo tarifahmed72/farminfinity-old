@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
-import axios from 'axios';
 
 interface FarmerKycProps {
   applicationId: string;
@@ -31,25 +30,33 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
   const token = localStorage.getItem('keycloak-token');
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
-  const getImageUrl = (imagePath: string): string => {
+  const getImageUrl = async (imagePath: string): Promise<string> => {
     if (!imagePath) return '';
-    // First check if we have a signed URL
+    
+    // First check if we have a cached signed URL
     if (signedUrls[imagePath]) {
       return signedUrls[imagePath];
     }
-    // Fallback to token-based URL
-    return `${baseUrl}${imagePath}?token=Bearer ${token}`;
-  };
-
-  const getSignedUrl = async (filename: string) => {
+    
     try {
-      const response = await axios.get<SignedUrlResponse>(
-        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+      // Get a new signed URL
+      const response = await axiosInstance.get<SignedUrlResponse>(
+        `/gcs-get-signed-image-url/${encodeURIComponent(imagePath)}`
       );
-      return response.data.signed_url;
+      
+      const newSignedUrl = response.data.signed_url;
+      
+      // Cache the signed URL
+      setSignedUrls(prev => ({
+        ...prev,
+        [imagePath]: newSignedUrl
+      }));
+      
+      return newSignedUrl;
     } catch (error) {
-      console.error('Error fetching signed URL:', error);
-      return null;
+      console.error('Error getting signed URL:', error);
+      // Fallback to token-based URL if signed URL fails
+      return `${baseUrl}${imagePath}?token=Bearer ${token}`;
     }
   };
 
@@ -59,7 +66,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     // Helper function to add image to promises
     const addImageToPromises = (image: string) => {
       if (image && !signedUrls[image]) {
-        urlPromises.set(image, getSignedUrl(image));
+        urlPromises.set(image, getImageUrl(image));
       }
     };
 
@@ -103,7 +110,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       setLoading(true);
       setErrorMsg('');
       setActivity(null);
-      setSignedUrls({});
 
       const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
       
@@ -159,13 +165,17 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       <div className="my-6">
         <h3 className="text-lg font-semibold mb-3">{title}:</h3>
         <div className="flex flex-wrap gap-4">
-          {images.map((filename, idx) => (
+          {images.map((img, idx) => (
             <img
               key={idx}
-              src={getImageUrl(filename)}
+              src={signedUrls[img] || ''}
               alt={`${title} ${idx + 1}`}
               className="w-40 h-40 object-cover rounded-lg shadow-md border hover:scale-105 transition-transform"
               loading="lazy"
+              onError={async (e) => {
+                const url = await getImageUrl(img);
+                (e.target as HTMLImageElement).src = url;
+              }}
             />
           ))}
         </div>
@@ -318,10 +328,14 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
               <img
-                src={getImageUrl(data.facility_gps_image)}
+                src={signedUrls[data.facility_gps_image] || ''}
                 alt="Facility GPS"
                 className="w-64 h-64 object-cover rounded-md shadow"
                 loading="lazy"
+                onError={async (e) => {
+                  const url = await getImageUrl(data.facility_gps_image);
+                  (e.target as HTMLImageElement).src = url;
+                }}
               />
             </div>
           )}
