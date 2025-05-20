@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setTokens } from '../utils/auth';
+import axios from 'axios';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
@@ -15,30 +16,40 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      const response = await fetch('https://dev-api.farmeasytechnologies.com/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-          user_type: "ADMIN"
-        }),
-      });
+      // Create form data
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('user_type', 'ADMIN');
 
-      const data = await response.json();
+      const response = await axios.post('https://dev-api.farmeasytechnologies.com/api/login', 
+        formData.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          }
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
+      const { data } = response;
+
+      if (data.access_token) {
+        // Store tokens
+        setTokens({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || '',
+          token_type: 'Bearer',
+          expires_in: data.expires_in || 3600
+        });
+        // Redirect to dashboard
+        navigate('/dashboard');
+      } else {
+        throw new Error('Invalid response from server');
       }
-
-      // Store tokens
-      setTokens(data);
-      // Redirect to dashboard
-      navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      setError(err.response?.data?.detail || err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 interface TokenResponse {
   access_token: string;
   refresh_token: string;
@@ -38,23 +40,30 @@ export const refreshAccessToken = async (): Promise<boolean> => {
       return false;
     }
 
-    const response = await fetch('https://dev-api.farmeasytechnologies.com/api/refresh-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token }),
-    });
+    // Create form data
+    const formData = new URLSearchParams();
+    formData.append('refresh_token', refresh_token);
 
-    if (!response.ok) {
-      clearTokens();
-      return false;
+    const response = await axios.post('https://dev-api.farmeasytechnologies.com/api/refresh-token', 
+      formData.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+        }
+      }
+    );
+
+    const { data } = response;
+    if (data.access_token) {
+      setTokens(data);
+      return true;
     }
 
-    const data: TokenResponse = await response.json();
-    setTokens(data);
-    return true;
+    clearTokens();
+    return false;
   } catch (error) {
+    console.error('Token refresh error:', error);
     clearTokens();
     return false;
   }
