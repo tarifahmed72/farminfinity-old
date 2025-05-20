@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setTokens } from '../utils/auth';
+import axios from 'axios';
+
+const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
 
 export default function AgentLogin() {
   const navigate = useNavigate();
@@ -11,64 +14,79 @@ export default function AgentLogin() {
   const [error, setError] = useState('');
 
   const handleSendOtp = async () => {
+    if (!phoneNumber.trim()) {
+      setError('Please enter a phone number');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
       
-      const response = await fetch('https://dev-api.farmeasytechnologies.com/api/send-otp', {
-        method: 'POST',
+      const response = await axios.post(`${BASE_URL}/send-otp`, {
+        phone_number: phoneNumber.trim(),
+        user_type: "AGENT"
+      }, {
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone_number: phoneNumber,
-          user_type: "AGENT"
-        }),
+        }
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to send OTP');
+      if (response.data?.detail) {
+        throw new Error(response.data.detail);
       }
 
       setShowOtpInput(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to send OTP. Please try again.');
+      console.error('Send OTP error:', err);
+      setError(err.response?.data?.detail || err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
+    if (!otp.trim()) {
+      setError('Please enter the OTP');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
 
-      const response = await fetch('https://dev-api.farmeasytechnologies.com/api/verify-otp', {
-        method: 'POST',
+      const response = await axios.post(`${BASE_URL}/verify-otp`, {
+        phone_number: phoneNumber.trim(),
+        otp: otp.trim(),
+        user_type: "AGENT"
+      }, {
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone_number: phoneNumber,
-          otp: otp,
-          user_type: "AGENT"
-        }),
+        }
       });
 
-      const data = await response.json();
+      const { data } = response;
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Invalid OTP');
+      if (!data.access_token) {
+        throw new Error('Invalid response from server');
       }
 
-      // Store tokens using the auth utility
-      setTokens(data);
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Store tokens and user type
+      setTokens({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || '',
+        token_type: data.token_type || 'Bearer',
+        expires_in: data.expires_in || 3600
+      });
+
+      // Store user type
+      localStorage.setItem('user_type', 'AGENT');
+
+      // Navigate to the agent's farmers page
+      navigate('/farmers');
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.');
+      console.error('Verify OTP error:', err);
+      setError(err.response?.data?.detail || err.message || 'Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -98,14 +116,18 @@ export default function AgentLogin() {
                 type="tel"
                 id="phone"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(e) => {
+                  setPhoneNumber(e.target.value);
+                  setError('');
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                 placeholder="Enter your phone number"
-                disabled={showOtpInput}
+                disabled={showOtpInput || loading}
+                required
               />
             </div>
 
-            {showOtpInput ? (
+            {showOtpInput && (
               <div>
                 <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
                   OTP
@@ -114,13 +136,18 @@ export default function AgentLogin() {
                   type="text"
                   id="otp"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => {
+                    setOtp(e.target.value);
+                    setError('');
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   placeholder="Enter OTP"
                   maxLength={6}
+                  disabled={loading}
+                  required
                 />
               </div>
-            ) : null}
+            )}
 
             <button
               onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
@@ -133,18 +160,18 @@ export default function AgentLogin() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Processing...
+                  {showOtpInput ? 'Verifying...' : 'Sending...'}
                 </span>
-              ) : showOtpInput ? (
-                'Verify OTP'
               ) : (
-                'Send OTP'
+                showOtpInput ? 'Verify OTP' : 'Send OTP'
               )}
             </button>
 
             <button
+              type="button"
               onClick={() => navigate('/')}
               className="w-full mt-4 text-green-600 hover:text-green-700 font-medium"
+              disabled={loading}
             >
               ← Back to Home
             </button>

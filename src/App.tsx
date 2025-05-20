@@ -15,22 +15,38 @@ import AgentLogin from './pages/AgentLogin';
 import AdminLogin from './pages/AdminLogin';
 
 // Protected Route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { children: React.ReactNode, allowedUserTypes?: string[] }) => {
   const token = localStorage.getItem('access_token');
+  const userType = localStorage.getItem('user_type');
+
   if (!token) {
     return <Navigate to="/" replace />;
   }
+
+  if (!userType || !allowedUserTypes.includes(userType)) {
+    // If user type is not allowed, redirect to appropriate dashboard
+    if (userType === 'ADMIN') {
+      return <Navigate to="/dashboard" replace />;
+    } else if (userType === 'AGENT') {
+      return <Navigate to="/farmers" replace />;
+    }
+    // If unknown user type, redirect to home
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 };
 
-// Layout component that includes Sidebar and Header
+// Layout for authenticated pages with sidebar and header
 const DashboardLayout = () => {
+  const userType = localStorage.getItem('user_type');
+  
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
+    <div className="flex min-h-screen">
+      {userType === 'ADMIN' && <Sidebar />}
+      <div className="flex-1">
         <Header />
-        <div className="flex-1 overflow-auto">
+        <div className="p-4">
           <Outlet />
         </div>
       </div>
@@ -38,13 +54,9 @@ const DashboardLayout = () => {
   );
 };
 
-// Auth Layout for login pages
+// Layout for authentication pages
 const AuthLayout = () => {
-  return (
-    <div className="min-h-screen">
-      <Outlet />
-    </div>
-  );
+  return <Outlet />;
 };
 
 function App() {
@@ -60,10 +72,11 @@ function App() {
 
         {/* Protected Routes - With Sidebar/Header */}
         <Route element={<DashboardLayout />}>
+          {/* Admin only routes */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -71,7 +84,7 @@ function App() {
           <Route
             path="/fpo"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <FPO />
               </ProtectedRoute>
             }
@@ -79,23 +92,15 @@ function App() {
           <Route
             path="/staff"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <Staff />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/farmers"
-            element={
-              <ProtectedRoute>
-                <Farmers />
               </ProtectedRoute>
             }
           />
           <Route
             path="/agent"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <Agent />
               </ProtectedRoute>
             }
@@ -103,15 +108,25 @@ function App() {
           <Route
             path="/bank-agent"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <BankAgent />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes accessible by both Admin and Agent */}
+          <Route
+            path="/farmers"
+            element={
+              <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
+                <Farmers />
               </ProtectedRoute>
             }
           />
           <Route
             path="/farmers_details/farmerId/:farmerId/applicationId/:applicationId"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
                 <FarmerDetails />
               </ProtectedRoute>
             }
@@ -119,12 +134,20 @@ function App() {
           <Route
             path="/farmers_applications/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
                 <FarmerApplication />
               </ProtectedRoute>
             }
           />
         </Route>
+
+        {/* Catch all route - redirect to appropriate dashboard */}
+        <Route
+          path="*"
+          element={
+            <Navigate to="/" replace />
+          }
+        />
       </Routes>
     </Router>
   );
