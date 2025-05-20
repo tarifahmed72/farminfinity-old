@@ -1,29 +1,7 @@
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { exchangeCodeForToken } from '../utils/auth';
+import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const code = queryParams.get('code');
-
-    if (code) {
-      handleCodeExchange(code);
-    }
-  }, [location]);
-
-  const handleCodeExchange = async (code: string) => {
-    const success = await exchangeCodeForToken(code);
-    if (success) {
-      navigate('/dashboard');
-    } else {
-      // Handle error - could show an error message
-      console.error('Failed to exchange code for token');
-    }
-  };
 
   const handleAdminLogin = () => {
     navigate('/admin-login');

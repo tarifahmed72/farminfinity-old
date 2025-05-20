@@ -58,26 +58,4 @@ export const refreshAccessToken = async (): Promise<boolean> => {
     clearTokens();
     return false;
   }
-};
-
-export const exchangeCodeForToken = async (code: string): Promise<boolean> => {
-  try {
-    const response = await fetch('https://dev-api.farmeasytechnologies.com/api/exchange-code', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ code }),
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const data: TokenResponse = await response.json();
-    setTokens(data);
-    return true;
-  } catch (error) {
-    return false;
-  }
 }; 
