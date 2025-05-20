@@ -24,6 +24,10 @@ import {
   FaHome
 } from 'react-icons/fa';
 
+interface ImagePath extends String {
+  __brand: 'ImagePath';
+}
+
 interface Bio {
   id?: string;
   name?: string;
@@ -116,10 +120,12 @@ const FarmerDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'>('profile');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
+  const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({});
 
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
-  const getImageUrl = async (imagePath: string | null | undefined): Promise<string> => {
+  const getImageUrl = async (imagePath: string | null | undefined, retryCount = 0): Promise<string> => {
     if (!imagePath) return '';
     
     // First check if we have a cached signed URL
@@ -128,6 +134,9 @@ const FarmerDetails: React.FC = () => {
     }
     
     try {
+      setImageLoadingStates(prev => ({ ...prev, [imagePath as string]: true }));
+      setImageErrorStates(prev => ({ ...prev, [imagePath as string]: false }));
+      
       // Get a new signed URL
       const response = await axiosInstance.get<SignedUrlResponse>(
         `/gcs-get-signed-image-url/${encodeURIComponent(imagePath)}`
@@ -138,15 +147,34 @@ const FarmerDetails: React.FC = () => {
       // Cache the signed URL
       setSignedUrls(prev => ({
         ...prev,
-        [imagePath]: newSignedUrl
+        [imagePath as string]: newSignedUrl
       }));
       
+      setImageLoadingStates(prev => ({ ...prev, [imagePath as string]: false }));
       return newSignedUrl;
     } catch (error) {
       console.error('Error getting signed URL:', error);
+      
+      // Retry up to 3 times with exponential backoff
+      if (retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return getImageUrl(imagePath, retryCount + 1);
+      }
+      
+      setImageLoadingStates(prev => ({ ...prev, [imagePath as string]: false }));
+      setImageErrorStates(prev => ({ ...prev, [imagePath as string]: true }));
+      
       // Fallback to token-based URL if signed URL fails
       const token = localStorage.getItem('keycloak-token');
       return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+    }
+  };
+
+  const handleImageError = async (imagePath: string, imgElement: HTMLImageElement) => {
+    if (!imageErrorStates[imagePath as string]) {
+      const url = await getImageUrl(imagePath);
+      imgElement.src = url;
     }
   };
 
@@ -281,7 +309,7 @@ const FarmerDetails: React.FC = () => {
 
   useEffect(() => {
     if (bio?.photo) {
-      getImageUrl(bio.photo);
+      getImageUrl(bio.photo).catch(console.error);
     }
   }, [bio?.photo]);
 
@@ -514,13 +542,28 @@ const FarmerDetails: React.FC = () => {
                       </div>
                       <h3 className="ml-4 text-lg font-medium text-gray-900">Profile Photo</h3>
                     </div>
-                    <div className="ml-14">
-                      <img
-                        src={signedUrls[bio.photo] || ''}
-                        alt="Farmer"
-                        className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
-                        onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo])}
-                      />
+                    <div className="ml-14 relative">
+                      {imageLoadingStates[bio.photo as string] && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded-lg">
+                          <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+                        </div>
+                      )}
+                      {imageErrorStates[bio.photo as string] ? (
+                        <div className="w-48 h-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                          <div className="text-center p-4">
+                            <FaUser className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-500">Failed to load image</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={signedUrls[bio.photo as string] || ''}
+                          alt="Farmer"
+                          className="w-48 h-48 object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200"
+                          onClick={() => bio.photo && setSelectedImage(signedUrls[bio.photo as string])}
+                          onError={(e) => bio.photo && handleImageError(bio.photo, e.target as HTMLImageElement)}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -621,18 +664,38 @@ const FarmerDetails: React.FC = () => {
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Front Side</p>
                                 <div className="relative group">
-                                  <img
-                                    src={signedUrls[poi.poi_image_front_url] || ''}
-                                    alt="POI Front"
-                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => poi.poi_image_front_url && setSelectedImage(signedUrls[poi.poi_image_front_url])}
-                                    onError={async (e) => {
-                                      if (poi.poi_image_front_url) {
-                                        const url = await getImageUrl(poi.poi_image_front_url);
-                                        (e.target as HTMLImageElement).src = url;
-                                      }
-                                    }}
-                                  />
+                                  {imageLoadingStates[poi.poi_image_front_url as string] && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded-lg z-10">
+                                      <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+                                    </div>
+                                  )}
+                                  {imageErrorStates[poi.poi_image_front_url as string] ? (
+                                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                                      <div className="text-center p-4">
+                                        <FaIdCard className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-500">Failed to load POI front image</p>
+                                        <button
+                                          onClick={() => {
+                                            if (poi.poi_image_front_url) {
+                                              setImageErrorStates(prev => ({ ...prev, [poi.poi_image_front_url as string]: false }));
+                                              getImageUrl(poi.poi_image_front_url);
+                                            }
+                                          }}
+                                          className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                          Retry
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={signedUrls[poi.poi_image_front_url as string] || ''}
+                                      alt="POI Front"
+                                      className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                      onClick={() => poi.poi_image_front_url && setSelectedImage(signedUrls[poi.poi_image_front_url as string])}
+                                      onError={(e) => poi.poi_image_front_url && handleImageError(poi.poi_image_front_url, e.target as HTMLImageElement)}
+                                    />
+                                  )}
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
                                   </div>
@@ -645,18 +708,38 @@ const FarmerDetails: React.FC = () => {
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Back Side</p>
                                 <div className="relative group">
-                                  <img
-                                    src={signedUrls[poi.poi_image_back_url] || ''}
-                                    alt="POI Back"
-                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => poi.poi_image_back_url && setSelectedImage(signedUrls[poi.poi_image_back_url])}
-                                    onError={async (e) => {
-                                      if (poi.poi_image_back_url) {
-                                        const url = await getImageUrl(poi.poi_image_back_url);
-                                        (e.target as HTMLImageElement).src = url;
-                                      }
-                                    }}
-                                  />
+                                  {imageLoadingStates[poi.poi_image_back_url as string] && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded-lg z-10">
+                                      <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+                                    </div>
+                                  )}
+                                  {imageErrorStates[poi.poi_image_back_url as string] ? (
+                                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                                      <div className="text-center p-4">
+                                        <FaIdCard className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-500">Failed to load POI back image</p>
+                                        <button
+                                          onClick={() => {
+                                            if (poi.poi_image_back_url) {
+                                              setImageErrorStates(prev => ({ ...prev, [poi.poi_image_back_url as string]: false }));
+                                              getImageUrl(poi.poi_image_back_url);
+                                            }
+                                          }}
+                                          className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                          Retry
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={signedUrls[poi.poi_image_back_url as string] || ''}
+                                      alt="POI Back"
+                                      className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                      onClick={() => poi.poi_image_back_url && setSelectedImage(signedUrls[poi.poi_image_back_url as string])}
+                                      onError={(e) => poi.poi_image_back_url && handleImageError(poi.poi_image_back_url, e.target as HTMLImageElement)}
+                                    />
+                                  )}
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
                                   </div>
@@ -694,18 +777,38 @@ const FarmerDetails: React.FC = () => {
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Front Side</p>
                                 <div className="relative group">
-                                  <img
-                                    src={signedUrls[poa.poa_image_front_url] || ''}
-                                    alt="POA Front"
-                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => poa.poa_image_front_url && setSelectedImage(signedUrls[poa.poa_image_front_url])}
-                                    onError={async (e) => {
-                                      if (poa.poa_image_front_url) {
-                                        const url = await getImageUrl(poa.poa_image_front_url);
-                                        (e.target as HTMLImageElement).src = url;
-                                      }
-                                    }}
-                                  />
+                                  {imageLoadingStates[poa.poa_image_front_url as string] && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded-lg z-10">
+                                      <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+                                    </div>
+                                  )}
+                                  {imageErrorStates[poa.poa_image_front_url as string] ? (
+                                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                                      <div className="text-center p-4">
+                                        <FaHome className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-500">Failed to load POA front image</p>
+                                        <button
+                                          onClick={() => {
+                                            if (poa.poa_image_front_url) {
+                                              setImageErrorStates(prev => ({ ...prev, [poa.poa_image_front_url as string]: false }));
+                                              getImageUrl(poa.poa_image_front_url);
+                                            }
+                                          }}
+                                          className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                          Retry
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={signedUrls[poa.poa_image_front_url as string] || ''}
+                                      alt="POA Front"
+                                      className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                      onClick={() => poa.poa_image_front_url && setSelectedImage(signedUrls[poa.poa_image_front_url as string])}
+                                      onError={(e) => poa.poa_image_front_url && handleImageError(poa.poa_image_front_url, e.target as HTMLImageElement)}
+                                    />
+                                  )}
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
                                   </div>
@@ -718,18 +821,38 @@ const FarmerDetails: React.FC = () => {
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Back Side</p>
                                 <div className="relative group">
-                                  <img
-                                    src={signedUrls[poa.poa_image_back_url] || ''}
-                                    alt="POA Back"
-                                    className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
-                                    onClick={() => poa.poa_image_back_url && setSelectedImage(signedUrls[poa.poa_image_back_url])}
-                                    onError={async (e) => {
-                                      if (poa.poa_image_back_url) {
-                                        const url = await getImageUrl(poa.poa_image_back_url);
-                                        (e.target as HTMLImageElement).src = url;
-                                      }
-                                    }}
-                                  />
+                                  {imageLoadingStates[poa.poa_image_back_url as string] && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded-lg z-10">
+                                      <FaSpinner className="h-8 w-8 animate-spin text-green-600" />
+                                    </div>
+                                  )}
+                                  {imageErrorStates[poa.poa_image_back_url as string] ? (
+                                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                                      <div className="text-center p-4">
+                                        <FaHome className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-500">Failed to load POA back image</p>
+                                        <button
+                                          onClick={() => {
+                                            if (poa.poa_image_back_url) {
+                                              setImageErrorStates(prev => ({ ...prev, [poa.poa_image_back_url as string]: false }));
+                                              getImageUrl(poa.poa_image_back_url);
+                                            }
+                                          }}
+                                          className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                          Retry
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={signedUrls[poa.poa_image_back_url as string] || ''}
+                                      alt="POA Back"
+                                      className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
+                                      onClick={() => poa.poa_image_back_url && setSelectedImage(signedUrls[poa.poa_image_back_url as string])}
+                                      onError={(e) => poa.poa_image_back_url && handleImageError(poa.poa_image_back_url, e.target as HTMLImageElement)}
+                                    />
+                                  )}
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                                     <FaSearch className="text-white opacity-0 group-hover:opacity-100 transform scale-0 group-hover:scale-100 transition-all duration-200" />
                                   </div>
