@@ -23,10 +23,10 @@ export default function ScoreCard({ farmerId, applicationId, financialYear }: Sc
           throw new Error("Missing required parameters");
         }
 
-        const url = new URL("https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/credit-report");
-        url.searchParams.append("farmerId", farmerId);
-        url.searchParams.append("applicationId", applicationId);
-        url.searchParams.append("financialYear", financialYear);
+        const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/scorecard-mini?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
+        // url.searchParams.append("farmerId", farmerId);
+        // url.searchParams.append("applicationId", applicationId);
+        // url.searchParams.append("financialYear", financialYear);
 
         const response = await fetch(url.toString());
         
