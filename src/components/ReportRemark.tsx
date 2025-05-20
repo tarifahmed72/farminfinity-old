@@ -55,6 +55,10 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
         });
 
         if (isMounted) {
+          if (!response.data) {
+            throw new Error('No data received from server');
+          }
+
           // Sort remarks by creation date (newest first)
           const sortedRemarks = response.data.sort((a: ReportRemark, b: ReportRemark) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -64,7 +68,10 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       } catch (err: any) {
         console.error('Error fetching remarks:', err);
         if (isMounted) {
-          setError(err.response?.data?.message || 'Failed to load remarks. Please try again.');
+          const errorMessage = err.response?.data?.detail || 
+                             err.response?.data?.message || 
+                             'Failed to load remarks. Please try again.';
+          setError(errorMessage);
         }
       } finally {
         if (isMounted) {
@@ -98,13 +105,20 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
         status: 'active'
       });
 
+      if (!response.data) {
+        throw new Error('No response received from server');
+      }
+
       // Add new remark to the list
       setRemarks(prev => [response.data, ...prev]);
       setNewRemark('');
       setIsAddingNew(false);
     } catch (err: any) {
       console.error('Error creating remark:', err);
-      setError(err.response?.data?.message || 'Failed to create remark. Please try again.');
+      const errorMessage = err.response?.data?.detail || 
+                         err.response?.data?.message || 
+                         'Failed to create remark. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -124,6 +138,10 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
         remark: sanitizedRemark
       });
 
+      if (!response.data) {
+        throw new Error('No response received from server');
+      }
+
       // Update the remark in the list
       setRemarks(prev => prev.map(r => 
         r.id === selectedRemark.id ? response.data : r
@@ -132,7 +150,10 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       setIsEditing(false);
     } catch (err: any) {
       console.error('Error updating remark:', err);
-      setError(err.response?.data?.message || 'Failed to update remark. Please try again.');
+      const errorMessage = err.response?.data?.detail || 
+                         err.response?.data?.message || 
+                         'Failed to update remark. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -140,23 +161,60 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
 
   // Delete remark
   const deleteRemark = async (remarkId: string) => {
+    if (!remarkId) {
+      setError('Invalid remark ID. Cannot delete this remark.');
+      setDeleteConfirmation(null);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError('');
 
-      await axiosInstance.patch(`/report-remark/${remarkId}`, {
+      const response = await axiosInstance.patch(`/report-remark/${remarkId}`, {
         status: 'deleted'
       });
+
+      if (!response.data) {
+        throw new Error('No response received from server');
+      }
 
       // Remove the remark from the list
       setRemarks(prev => prev.filter(r => r.id !== remarkId));
       setDeleteConfirmation(null);
     } catch (err: any) {
       console.error('Error deleting remark:', err);
-      setError(err.response?.data?.message || 'Failed to delete remark. Please try again.');
+      const errorMessage = err.response?.data?.detail || 
+                         err.response?.data?.message || 
+                         'Failed to delete remark. Please try again.';
+      setError(errorMessage);
+      
+      // Keep the delete confirmation dialog open on error
+      if (err.response?.status !== 404) {
+        setDeleteConfirmation(remarkId);
+      } else {
+        // If remark not found, remove it from the list
+        setRemarks(prev => prev.filter(r => r.id !== remarkId));
+        setDeleteConfirmation(null);
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Add a validation function for remark ID
+  const validateRemarkId = (id: string | null): boolean => {
+    return Boolean(id && typeof id === 'string' && id.trim().length > 0);
+  };
+
+  // Update the delete confirmation handler
+  const handleDeleteClick = (remarkId: string) => {
+    if (!validateRemarkId(remarkId)) {
+      setError('Invalid remark ID. Cannot delete this remark.');
+      return;
+    }
+    setError(''); // Clear any existing errors
+    setDeleteConfirmation(remarkId);
   };
 
   // Handle missing required props
@@ -318,7 +376,7 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
                       <FaEdit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setDeleteConfirmation(remark.id)}
+                      onClick={() => handleDeleteClick(remark.id)}
                       className="p-1 text-gray-500 hover:text-red-600 transition-colors duration-200"
                       disabled={isSubmitting}
                       title="Delete remark"
