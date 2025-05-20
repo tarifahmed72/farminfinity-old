@@ -5,6 +5,13 @@ import axios from 'axios';
 
 const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
 
+interface ValidationError {
+  type: string;
+  loc: string[];
+  msg: string;
+  input: any;
+}
+
 export default function LoginAdmin() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
@@ -12,18 +19,27 @@ export default function LoginAdmin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const formatValidationErrors = (errors: ValidationError[]) => {
+    if (!Array.isArray(errors)) return 'Invalid response format';
+    return errors.map(err => {
+      if (err.loc && err.loc.includes('body')) {
+        const field = err.loc[err.loc.length - 1];
+        return `${field}: ${err.msg}`;
+      }
+      return err.msg;
+    }).join('\n');
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
       setError('');
 
-      // Create form data using URLSearchParams for proper encoding
+      // Create form data using URLSearchParams
       const formData = new URLSearchParams();
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('grant_type', 'password');
-      formData.append('user_type', 'ADMIN');
+      formData.append('username', username.trim());
+      formData.append('password', password.trim());
 
       // Log the request data for debugging
       console.log('Login Request:', {
@@ -36,11 +52,10 @@ export default function LoginAdmin() {
 
       const response = await axios.post(
         `${BASE_URL}/login`,
-        formData,
+        formData.toString(),  // Convert URLSearchParams to string
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
           }
         }
       );
@@ -72,12 +87,20 @@ export default function LoginAdmin() {
         error: err
       });
 
-      setError(
-        err.response?.data?.detail || 
-        err.response?.data?.message || 
-        err.message || 
-        'Login failed. Please try again.'
-      );
+      // Handle validation errors
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          setError(formatValidationErrors(err.response.data.detail));
+        } else {
+          setError(err.response.data.detail);
+        }
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -93,7 +116,7 @@ export default function LoginAdmin() {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md whitespace-pre-line">
               {error}
             </div>
           )}
