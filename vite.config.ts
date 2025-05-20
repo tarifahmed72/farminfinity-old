@@ -9,8 +9,11 @@ export default defineConfig({
       '/api': {
         target: 'https://dev-api.farmeasytechnologies.com',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        headers: {
+          'Origin': 'https://farmin.vercel.app'
+        }
       }
     }
   }

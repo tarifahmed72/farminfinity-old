@@ -6,11 +6,17 @@ const BASE_URL = import.meta.env.DEV
   ? '/api'  // This will use the Vite proxy
   : 'https://dev-api.farmeasytechnologies.com/api';
 
+// Ensure the base URL is always HTTPS in production
+if (!import.meta.env.DEV && !BASE_URL.startsWith('https://')) {
+  throw new Error('Production API URL must use HTTPS');
+}
+
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'Origin': 'https://farmin.vercel.app'
   },
   withCredentials: true // Enable credentials for cross-origin requests
 });
@@ -18,6 +24,11 @@ const axiosInstance = axios.create({
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
+    // Ensure HTTPS in production
+    if (!import.meta.env.DEV && config.url && !config.url.startsWith('https://') && !config.url.startsWith('/')) {
+      config.url = `https://${config.url}`;
+    }
+
     // Skip token for public endpoints
     if (config.url?.includes('/send-otp') || config.url?.includes('/verify-otp')) {
       return config;
