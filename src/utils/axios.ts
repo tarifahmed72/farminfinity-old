@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestHeaders } from 'axios';
 import keycloak from '../keycloak';
 
 // Use proxy in development, direct URL in production
@@ -15,10 +15,9 @@ const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Origin': 'https://farmin.vercel.app'
+    'Accept': 'application/json'
   },
-  withCredentials: true // Enable credentials for cross-origin requests
+  withCredentials: false // Disable credentials for cross-origin requests
 });
 
 // Add a request interceptor
@@ -48,7 +47,15 @@ axiosInstance.interceptors.request.use(
       const token = keycloak.token || localStorage.getItem('keycloak-token');
       
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        if (config.headers) {
+          (config.headers as AxiosRequestHeaders).Authorization = `Bearer ${token}`;
+        } else {
+          config.headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          } as AxiosRequestHeaders;
+        }
       } else {
         // Redirect to login if no token available
         window.location.href = '/login';
@@ -80,7 +87,9 @@ axiosInstance.interceptors.response.use(
           // Token refreshed successfully, retry the original request
           const token = keycloak.token;
           localStorage.setItem('keycloak-token', token || '');
-          error.config.headers.Authorization = `Bearer ${token}`;
+          if (error.config.headers) {
+            (error.config.headers as AxiosRequestHeaders).Authorization = `Bearer ${token}`;
+          }
           return axiosInstance(error.config);
         }
       } catch (refreshError) {

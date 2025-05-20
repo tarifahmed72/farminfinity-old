@@ -11,8 +11,19 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
-        headers: {
-          'Origin': 'https://farmin.vercel.app'
+        configure: (proxy, _options) => {
+          proxy.on('error', (err) => {
+            // tslint:disable-next-line:no-console
+            console.error('proxy error', err);
+          });
+          proxy.on('proxyReq', (_proxyReq, req) => {
+            // tslint:disable-next-line:no-console
+            console.info('Sending Request:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req) => {
+            // tslint:disable-next-line:no-console
+            console.info('Received Response:', proxyRes.statusCode, req.url);
+          });
         }
       }
     }
