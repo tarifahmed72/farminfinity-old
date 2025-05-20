@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 type propsType ={
-    farmerId: string|undefined,
-    applicationId: string|undefined,
-    financialYear: string
+    farmerId:String|undefined,
+    applicationId:String|undefined,
+    financialYear:String
 }
 export default function ScoreCard({ farmerId, applicationId, financialYear}: propsType ) {
   const [htmlContent, setHtmlContent] = useState("");
@@ -11,7 +11,7 @@ export default function ScoreCard({ farmerId, applicationId, financialYear}: pro
   useEffect(() => {
     async function fetchScoreCard() {
       try {
-        const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/scorecard-mini?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
+        const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/credit-report?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
         const token = localStorage.getItem('token');
 
         const response = await fetch(url, {
