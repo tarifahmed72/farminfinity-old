@@ -18,26 +18,35 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      // Create form data object matching Dart implementation
-      const formData = {
-        'username': username,
-        'password': password
-      };
+      // Create form data using URLSearchParams for proper encoding
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('grant_type', 'password');
+      formData.append('user_type', 'ADMIN');
 
-      // Convert to x-www-form-urlencoded format
-      const urlEncodedData = Object.keys(formData)
-        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(formData[key as keyof typeof formData])}`)
-        .join('&');
+      // Log the request data for debugging
+      console.log('Login Request:', {
+        url: `${BASE_URL}/login`,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data: formData.toString()
+      });
 
       const response = await axios.post(
         `${BASE_URL}/login`,
-        urlEncodedData,
+        formData,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
           }
         }
       );
+
+      // Log the response for debugging
+      console.log('Login Response:', response.data);
 
       const { data } = response;
 
@@ -55,7 +64,14 @@ export default function LoginAdmin() {
         throw new Error('Invalid response from server');
       }
     } catch (err: any) {
-      console.error('Login error:', err.response?.data || err);
+      // Enhanced error logging
+      console.error('Login error details:', {
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers,
+        error: err
+      });
+
       setError(
         err.response?.data?.detail || 
         err.response?.data?.message || 
