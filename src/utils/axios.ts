@@ -22,7 +22,7 @@ if (!import.meta.env.DEV && !BASE_URL.startsWith('https://')) {
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json'
   },
   withCredentials: false // Disable credentials for cross-origin requests
@@ -35,6 +35,12 @@ axiosInstance.interceptors.request.use(
     if (access_token) {
       config.headers.Authorization = `Bearer ${access_token}`;
     }
+    
+    // Convert request data to URLSearchParams if it's not already a string
+    if (config.data && typeof config.data === 'object' && !(config.data instanceof URLSearchParams)) {
+      config.data = new URLSearchParams(config.data).toString();
+    }
+    
     return config;
   },
   (error) => {
