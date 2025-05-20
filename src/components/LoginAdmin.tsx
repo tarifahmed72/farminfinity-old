@@ -18,15 +18,23 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      // Format data as URL-encoded string
-      const formData = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+      // Create form data object matching Dart implementation
+      const formData = {
+        'username': username,
+        'password': password
+      };
+
+      // Convert to x-www-form-urlencoded format
+      const urlEncodedData = Object.keys(formData)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(formData[key as keyof typeof formData])}`)
+        .join('&');
 
       const response = await axios.post(
         `${BASE_URL}/login`,
-        formData,
+        urlEncodedData,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/x-www-form-urlencoded'
           }
         }
       );
