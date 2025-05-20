@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import axiosInstance from '../utils/axios';
+import { isAuthenticated, getUserType } from '../utils/auth';
 
 interface ApiFarmer {
   id: string;
@@ -41,6 +42,20 @@ const Farmers = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const ITEMS_PER_PAGE = 20;
 
+  // Check authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/login');
+      return;
+    }
+
+    const userType = getUserType();
+    if (!userType || !['ADMIN', 'AGENT'].includes(userType)) {
+      navigate('/login');
+      return;
+    }
+  }, [navigate]);
+
   // Create a debounced version of the fetch function
   const debouncedFetch = useCallback(
     debounce(async (query: string, status: string, page: number) => {
@@ -57,9 +72,15 @@ const Farmers = () => {
           url += `&status=${status}`;
         }
 
-        const response = await axiosInstance.get(url);
+        console.debug('Fetching farmers:', { url, query, status, page });
 
-        // Adjust the data mapping to match the API response structure
+        const response = await axiosInstance.get(url);
+        console.debug('Farmers response:', response.data);
+
+        if (!response.data || !Array.isArray(response.data.data)) {
+          throw new Error('Invalid response format from server');
+        }
+
         const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
           id: farmer.id,
           name: farmer.name || "N/A",
@@ -67,7 +88,7 @@ const Farmers = () => {
           phone: farmer.phone_no,
           city: farmer.village || "N/A",
           createdOn: new Date(farmer.created_at).toLocaleDateString(),
-          status: getStatusText(farmer.status),
+          status: farmer.status || 0,
           approval: "N/A",
           amount: "N/A",
         }));
@@ -78,13 +99,19 @@ const Farmers = () => {
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
-        setError(error.response?.data?.detail || "Failed to fetch farmers data. Please try again.");
+        const errorMessage = error.response?.data?.detail || error.message || "Failed to fetch farmers data. Please try again.";
+        setError(errorMessage);
         setFarmers([]);
+
+        // If unauthorized, redirect to login
+        if (error.response?.status === 401) {
+          navigate('/login');
+        }
       } finally {
         setSearchLoading(false);
       }
     }, 300),
-    []
+    [navigate]
   );
 
   useEffect(() => {
@@ -99,25 +126,45 @@ const Farmers = () => {
     };
   }, [searchQuery, selectedStatus, currentPage, debouncedFetch]);
 
-  const getStatusColor = (status: number) => {
-    switch (status) {
-      case 2:
-        return 'bg-green-100 text-green-800';
-      default: // Leads
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-sm';
-    }
-  };
-
-  const getStatusText = (status: number | null): string => {
+  const getStatusText = (status: number): string => {
     switch (status) {
       case 1:
         return "Lead";
       case 2:
-        return "Contacted";
-      case null:
-        return "Unknown";
+        return "Application Submitted";
+      case 3:
+        return "Under Process";
+      case 4:
+        return "Approved";
+      case 5:
+        return "Rejected";
+      case 6:
+        return "Disbursed";
+      case 7:
+        return "Re-submit";
       default:
         return "Unknown";
+    }
+  };
+
+  const getStatusColor = (status: number): string => {
+    switch (status) {
+      case 1:
+        return 'bg-yellow-100 text-yellow-800';
+      case 2:
+        return 'bg-blue-100 text-blue-800';
+      case 3:
+        return 'bg-purple-100 text-purple-800';
+      case 4:
+        return 'bg-green-100 text-green-800';
+      case 5:
+        return 'bg-red-100 text-red-800';
+      case 6:
+        return 'bg-indigo-100 text-indigo-800';
+      case 7:
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 

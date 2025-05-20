@@ -13,28 +13,10 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: normalizeUrl('https://dev-api.farmeasytechnologies.com'),
+                target: 'https://dev-api.farmeasytechnologies.com',
                 changeOrigin: true,
                 secure: true,
-                rewrite: function (path) { return path.replace(/^\/api/, '/api'); },
-                configure: function (proxy, _options) {
-                    proxy.on('error', function (err) {
-                        // tslint:disable-next-line:no-console
-                        console.error('proxy error', err);
-                    });
-                    proxy.on('proxyReq', function (_proxyReq, req) {
-                        // tslint:disable-next-line:no-console
-                        console.info('Sending Request:', req.method, req.url);
-                        // Ensure the request is using HTTPS
-                        if (req.headers.host) {
-                            req.headers.host = req.headers.host.replace('http://', 'https://');
-                        }
-                    });
-                    proxy.on('proxyRes', function (proxyRes, req) {
-                        // tslint:disable-next-line:no-console
-                        console.info('Received Response:', proxyRes.statusCode, req.url);
-                    });
-                }
+                rewrite: function (path) { return path.replace(/^\/api/, '/api'); }
             }
         }
     }

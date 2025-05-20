@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setTokens } from '../utils/auth';
+import axiosInstance from '../utils/axios';
+import { USER_TYPES } from '../config/api';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -15,26 +17,20 @@ export default function AdminLogin() {
       setLoading(true);
       setError('');
 
-      const response = await fetch('https://dev-api.farmeasytechnologies.com/api/login', {
-        method: 'POST',
+      const formData = new URLSearchParams();
+      formData.append('username', username.trim());
+      formData.append('password', password.trim());
+      formData.append('user_type', USER_TYPES.ADMIN);
+
+      const { data } = await axiosInstance.post('/login', formData, {
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-          user_type: "ADMIN"
-        }),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
-      }
-
-      // Store tokens
-      setTokens(data);
+      // Store tokens and user type
+      setTokens(data, USER_TYPES.ADMIN);
+      
       // Redirect to dashboard
       navigate('/dashboard');
     } catch (err: any) {
@@ -72,6 +68,7 @@ export default function AdminLogin() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                 placeholder="Enter your username"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -87,6 +84,7 @@ export default function AdminLogin() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                 placeholder="Enter your password"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -112,6 +110,7 @@ export default function AdminLogin() {
               type="button"
               onClick={() => navigate('/')}
               className="w-full mt-4 text-green-600 hover:text-green-700 font-medium"
+              disabled={loading}
             >
               ← Back to Home
             </button>
