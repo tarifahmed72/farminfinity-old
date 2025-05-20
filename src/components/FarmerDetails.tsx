@@ -134,11 +134,23 @@ const FarmerDetails: React.FC = () => {
       setImageErrorStates(prev => ({ ...prev, [imagePath as string]: false }));
       
       // Get a new signed URL
+      const encodedPath = encodeURIComponent(imagePath.replace(/^\//, '')); // Remove leading slash if present
       const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${encodeURIComponent(imagePath)}`
+        `/gcs-get-signed-image-url/${encodedPath}`
       );
       
+      if (!response.data || !response.data.signed_url) {
+        throw new Error('Invalid signed URL response');
+      }
+
       const newSignedUrl = response.data.signed_url;
+      
+      // Validate the URL
+      try {
+        new URL(newSignedUrl);
+      } catch (e) {
+        throw new Error('Invalid URL format received');
+      }
       
       // Cache the signed URL
       setSignedUrls(prev => ({
@@ -163,14 +175,28 @@ const FarmerDetails: React.FC = () => {
       
       // Fallback to token-based URL if signed URL fails
       const token = localStorage.getItem('keycloak-token');
-      return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+      const cleanPath = imagePath.replace(/^\//, ''); // Remove leading slash if present
+      return `${baseUrl}${cleanPath}?token=Bearer ${token}`;
     }
   };
 
   const handleImageError = async (imagePath: string, imgElement: HTMLImageElement) => {
-    if (!imageErrorStates[imagePath as string]) {
-      const url = await getImageUrl(imagePath);
-      imgElement.src = url;
+    try {
+      if (!imageErrorStates[imagePath as string]) {
+        // Clear any existing error state
+        setImageErrorStates(prev => ({ ...prev, [imagePath as string]: false }));
+        
+        // Try to get a fresh URL
+        const url = await getImageUrl(imagePath);
+        
+        // Only set the new URL if we haven't hit an error state
+        if (!imageErrorStates[imagePath as string]) {
+          imgElement.src = url;
+        }
+      }
+    } catch (error) {
+      console.error('Error handling image load failure:', error);
+      setImageErrorStates(prev => ({ ...prev, [imagePath as string]: true }));
     }
   };
 
@@ -198,15 +224,21 @@ const FarmerDetails: React.FC = () => {
 
     if (urlPromises.size > 0) {
       try {
-        const urlResults = await Promise.all(urlPromises.values());
+        const results = await Promise.allSettled(urlPromises.values());
         const newSignedUrls: Record<string, string> = { ...signedUrls };
+        
         let i = 0;
         urlPromises.forEach((_, key) => {
-          if (urlResults[i]) {
-            newSignedUrls[key] = urlResults[i];
+          const result = results[i];
+          if (result.status === 'fulfilled') {
+            newSignedUrls[key] = result.value;
+          } else {
+            console.error(`Failed to load URL for ${key}:`, result.reason);
+            setImageErrorStates(prev => ({ ...prev, [key]: true }));
           }
           i++;
         });
+        
         setSignedUrls(newSignedUrls);
       } catch (error) {
         console.error('Error loading signed URLs:', error);
@@ -305,7 +337,22 @@ const FarmerDetails: React.FC = () => {
 
   useEffect(() => {
     if (bio?.photo) {
-      getImageUrl(bio.photo).catch(console.error);
+      getImageUrl(bio.photo)
+        .then(url => {
+          // Preload the image
+          const img = new Image();
+          img.src = url;
+          return new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+        })
+        .catch(error => {
+          console.error('Error preloading bio photo:', error);
+          if (bio.photo) {
+            setImageErrorStates(prev => ({ ...prev, [bio.photo as string]: true }));
+          }
+        });
     }
   }, [bio?.photo]);
 
