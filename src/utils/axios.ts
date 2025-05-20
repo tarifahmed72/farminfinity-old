@@ -12,34 +12,29 @@ const normalizeUrl = (url: string) => {
 // Use proxy in development, direct URL in production
 const BASE_URL = import.meta.env.DEV 
   ? '/api'  // This will use the Vite proxy
-  : normalizeUrl('https://dev-api.farmeasytechnologies.com/api');
-
-// Ensure the base URL is always HTTPS in production
-if (!import.meta.env.DEV && !BASE_URL.startsWith('https://')) {
-  throw new Error('Production API URL must use HTTPS');
-}
+  : 'https://dev-api.farmeasytechnologies.com/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  timeout: 10000, // Global 10 second timeout
-  withCredentials: false // Disable credentials for cross-origin requests
+  timeout: 10000,
+  withCredentials: false
 });
 
 // Request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
+    // Ensure the URL is HTTPS in production
+    if (!import.meta.env.DEV && config.url) {
+      config.url = normalizeUrl(config.url);
+    }
+
     const { access_token } = getTokens();
     if (access_token) {
       config.headers.Authorization = `Bearer ${access_token}`;
-    }
-    
-    // Convert request data to URLSearchParams if it's not already a string
-    if (config.data && typeof config.data === 'object' && !(config.data instanceof URLSearchParams)) {
-      config.data = new URLSearchParams(config.data).toString();
     }
     
     return config;
@@ -54,32 +49,19 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Log error details for debugging
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
-
-    // Handle timeout errors
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(new Error('Request timed out. Please try again.'));
     }
 
-    // Handle network errors
     if (!error.response) {
       return Promise.reject(new Error('Network error. Please check your connection and try again.'));
     }
 
-    // Handle 401 and token refresh
     if (error.response.status === 401 && !error.config._retry) {
       error.config._retry = true;
 
       try {
         const refreshed = await refreshAccessToken();
-        
         if (refreshed) {
           const { access_token } = getTokens();
           error.config.headers.Authorization = `Bearer ${access_token}`;

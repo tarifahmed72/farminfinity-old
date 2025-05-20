@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: normalizeUrl('https://dev-api.farmeasytechnologies.com'),
+        target: 'https://dev-api.farmeasytechnologies.com',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
@@ -24,12 +24,12 @@ export default defineConfig({
             // tslint:disable-next-line:no-console
             console.error('proxy error', err);
           });
-          proxy.on('proxyReq', (_proxyReq, req) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
             // tslint:disable-next-line:no-console
             console.info('Sending Request:', req.method, req.url);
-            // Ensure the request is using HTTPS
-            if (req.headers.host) {
-              req.headers.host = req.headers.host.replace('http://', 'https://');
+            // Ensure request uses HTTPS
+            if (proxyReq.protocol === 'http:') {
+              proxyReq.protocol = 'https:';
             }
           });
           proxy.on('proxyRes', (proxyRes, req) => {
