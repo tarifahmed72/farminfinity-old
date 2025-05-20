@@ -18,10 +18,8 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      // Create form data with exact parameter names - matching Dart implementation
-      const formData = new URLSearchParams();
-      formData.append('username', username);
-      formData.append('password', password);
+      // Format data as URL-encoded string
+      const formData = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
 
       const response = await axios.post(
         `${BASE_URL}/login`,
