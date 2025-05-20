@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev',
+        target: 'https://dev-api.farmeasytechnologies.com',
         changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }

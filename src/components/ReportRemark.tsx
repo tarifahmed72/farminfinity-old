@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments } from 'react-icons/fa';
+import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import DOMPurify from 'dompurify';
 
 interface ReportRemarkProps {
   farmerId: string;
@@ -18,6 +19,7 @@ interface ReportRemark {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+  status?: 'active' | 'deleted';
 }
 
 export default function ReportRemark({ farmerId, applicationId, financialYear }: ReportRemarkProps) {
@@ -29,6 +31,7 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
   const [selectedRemark, setSelectedRemark] = useState<ReportRemark | null>(null);
   const [newRemark, setNewRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
 
   // Fetch remarks
   useEffect(() => {
@@ -44,22 +47,24 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
         setLoading(true);
         setError('');
         
-        const response = await axiosInstance.get('/report-remarks/', {
+        const response = await axiosInstance.get(`/report-remarks/${applicationId}/${financialYear}`, {
           params: {
-            application_id: applicationId,
-            financial_year: financialYear,
             skip: 0,
-            limit: 10
+            limit: 50
           }
         });
 
         if (isMounted) {
-          setRemarks(response.data);
+          // Sort remarks by creation date (newest first)
+          const sortedRemarks = response.data.sort((a: ReportRemark, b: ReportRemark) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setRemarks(sortedRemarks);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching remarks:', err);
         if (isMounted) {
-          setError('Failed to load remarks. Please try again.');
+          setError(err.response?.data?.message || 'Failed to load remarks. Please try again.');
         }
       } finally {
         if (isMounted) {
@@ -83,29 +88,23 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       setIsSubmitting(true);
       setError('');
 
-      await axiosInstance.post('/report-remark/', {
+      const sanitizedRemark = DOMPurify.sanitize(newRemark.trim());
+      
+      const response = await axiosInstance.post('/report-remark', {
         farmer_id: farmerId,
         application_id: applicationId,
         financial_year: financialYear,
-        remark: newRemark.trim()
+        remark: sanitizedRemark,
+        status: 'active'
       });
 
-      // Refresh remarks list
-      const response = await axiosInstance.get('/report-remarks/', {
-        params: {
-          application_id: applicationId,
-          financial_year: financialYear,
-          skip: 0,
-          limit: 10
-        }
-      });
-      
-      setRemarks(response.data);
+      // Add new remark to the list
+      setRemarks(prev => [response.data, ...prev]);
       setNewRemark('');
       setIsAddingNew(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating remark:', err);
-      setError('Failed to create remark. Please try again.');
+      setError(err.response?.data?.message || 'Failed to create remark. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,26 +118,42 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       setIsSubmitting(true);
       setError('');
 
-      await axiosInstance.patch(`/report-remark/${selectedRemark.id}`, {
-        remark: selectedRemark.remark.trim()
+      const sanitizedRemark = DOMPurify.sanitize(selectedRemark.remark.trim());
+      
+      const response = await axiosInstance.put(`/report-remark/${selectedRemark.id}`, {
+        remark: sanitizedRemark
       });
 
-      // Refresh remarks list
-      const response = await axiosInstance.get('/report-remarks/', {
-        params: {
-          application_id: applicationId,
-          financial_year: financialYear,
-          skip: 0,
-          limit: 10
-        }
-      });
-      
-      setRemarks(response.data);
+      // Update the remark in the list
+      setRemarks(prev => prev.map(r => 
+        r.id === selectedRemark.id ? response.data : r
+      ));
       setSelectedRemark(null);
       setIsEditing(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating remark:', err);
-      setError('Failed to update remark. Please try again.');
+      setError(err.response?.data?.message || 'Failed to update remark. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete remark
+  const deleteRemark = async (remarkId: string) => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+
+      await axiosInstance.patch(`/report-remark/${remarkId}`, {
+        status: 'deleted'
+      });
+
+      // Remove the remark from the list
+      setRemarks(prev => prev.filter(r => r.id !== remarkId));
+      setDeleteConfirmation(null);
+    } catch (err: any) {
+      console.error('Error deleting remark:', err);
+      setError(err.response?.data?.message || 'Failed to delete remark. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -274,27 +289,47 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-500">
-                    {new Date(remark.created_at).toLocaleDateString('en-US', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedRemark(remark);
-                      setIsEditing(true);
-                    }}
-                    className="p-1 text-gray-500 hover:text-purple-600 transition-colors duration-200"
-                    disabled={isSubmitting}
-                  >
-                    <FaEdit className="h-4 w-4" />
-                  </button>
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      {new Date(remark.created_at).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    {remark.created_by && (
+                      <p className="text-xs text-gray-400">
+                        By: {remark.created_by}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        setSelectedRemark(remark);
+                        setIsEditing(true);
+                      }}
+                      className="p-1 text-gray-500 hover:text-purple-600 transition-colors duration-200"
+                      disabled={isSubmitting}
+                      title="Edit remark"
+                    >
+                      <FaEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmation(remark.id)}
+                      className="p-1 text-gray-500 hover:text-red-600 transition-colors duration-200"
+                      disabled={isSubmitting}
+                      title="Delete remark"
+                    >
+                      <FaTrash className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-gray-700 whitespace-pre-wrap">{remark.remark}</p>
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-gray-700 whitespace-pre-wrap">{remark.remark}</p>
+                </div>
                 {remark.updated_at !== remark.created_at && (
                   <p className="text-xs text-gray-400 mt-2">
                     Last edited: {new Date(remark.updated_at).toLocaleDateString('en-US', {
@@ -304,7 +339,37 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
+                    {remark.updated_by && ` by ${remark.updated_by}`}
                   </p>
+                )}
+
+                {/* Delete Confirmation Dialog */}
+                {deleteConfirmation === remark.id && (
+                  <div className="mt-4 p-4 bg-red-50 rounded-lg">
+                    <p className="text-red-700 mb-4">Are you sure you want to delete this remark?</p>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={() => setDeleteConfirmation(null)}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 flex items-center"
+                        disabled={isSubmitting}
+                      >
+                        <FaTimes className="mr-2" />
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => deleteRemark(remark.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 flex items-center"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <FaSpinner className="animate-spin mr-2" />
+                        ) : (
+                          <FaCheck className="mr-2" />
+                        )}
+                        Confirm Delete
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
