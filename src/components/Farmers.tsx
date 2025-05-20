@@ -2,7 +2,19 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
-import { getTokens } from '../utils/auth';
+import axiosInstance from '../utils/axios';
+
+interface ApiFarmer {
+  id: string;
+  farmer_id: string;
+  phone_no: string;
+  referral_id: string | null;
+  name: string | null;
+  village: string | null;
+  status: number | null;
+  created_at: string;
+  updated_at: string;
+}
 
 interface DisplayFarmer {
   id: string;
@@ -45,25 +57,24 @@ const Farmers = () => {
           url += `&status=${status}`;
         }
 
-        const { access_token } = getTokens();
-        if (!access_token) {
-          throw new Error('No access token found');
-        }
+        const response = await axiosInstance.get('/farmers');
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/farmers`, {
-          headers: {
-            'Authorization': `Bearer ${access_token}`
-          }
-        });
+        // Adjust the data mapping to match the API response structure
+        const fetchedFarmers = response.data.data.map((farmer: ApiFarmer) => ({
+          id: farmer.id,
+          name: farmer.name || "N/A", // Handle cases where name is null
+          gender: "N/A", // Gender is not present in the API response
+          phone: farmer.phone_no,
+          city: farmer.village || "N/A", // Assuming 'village' maps to city
+          createdOn: new Date(farmer.created_at).toLocaleDateString(), // Format the date
+          status: getStatusText(farmer.status), // Function to convert status code to text
+          approval: "N/A", // Approval is not present in the API response
+          amount: "N/A", // Amount is not present in the API response
+        }));
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch farmers');
-        }
-
-        const data = await response.json();
-        setFarmers(data.farmers);
-        setTotalItems(data.total);
-        setTotalPages(Math.ceil(data.total / ITEMS_PER_PAGE));
+        setFarmers([...farmers, ...fetchedFarmers]);
+        setTotalItems(response.data.total);
+        setTotalPages(Math.ceil(response.data.total / ITEMS_PER_PAGE));
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
@@ -73,7 +84,7 @@ const Farmers = () => {
         setSearchLoading(false);
       }
     }, 300),
-    []
+    [farmers]
   );
 
   useEffect(() => {
@@ -92,12 +103,16 @@ const Farmers = () => {
     }
   };
 
-  const getStatusText = (status: number) => {
+  const getStatusText = (status: number | null): string => {
     switch (status) {
+      case 1:
+        return "Lead";
       case 2:
-        return 'Submitted';
+        return "Contacted";
+      case null:
+        return "Unknown";
       default:
-        return 'Leads';
+        return "Unknown";
     }
   };
 
