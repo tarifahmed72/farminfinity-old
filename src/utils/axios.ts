@@ -1,7 +1,10 @@
 import axios from 'axios';
 import keycloak from '../keycloak';
 
-const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
+// Use proxy in development, direct URL in production
+const BASE_URL = import.meta.env.DEV 
+  ? '/api'  // This will use the Vite proxy
+  : 'https://dev-api.farmeasytechnologies.com/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,

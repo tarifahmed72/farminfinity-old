@@ -121,6 +121,13 @@ const FarmerDetails: React.FC = () => {
 
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
+  const extractImageName = (imagePath: string): string => {
+    // Remove any leading slashes and the base URL if present
+    const cleanPath = imagePath.replace(/^\//, '').replace(baseUrl, '');
+    // Remove any query parameters
+    return cleanPath.split('?')[0];
+  };
+
   const getImageUrl = async (imagePath: string | null | undefined, retryCount = 0): Promise<string> => {
     if (!imagePath) return '';
     
@@ -133,22 +140,28 @@ const FarmerDetails: React.FC = () => {
       setImageLoadingStates(prev => ({ ...prev, [imagePath as string]: true }));
       setImageErrorStates(prev => ({ ...prev, [imagePath as string]: false }));
       
+      // Extract just the image name from the path
+      const imageName = extractImageName(imagePath);
+      console.log('Requesting signed URL for image:', imageName);
+
       // Get a new signed URL
-      const encodedPath = encodeURIComponent(imagePath.replace(/^\//, '')); // Remove leading slash if present
       const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${encodedPath}`
+        `/gcs-get-signed-image-url/${encodeURIComponent(imageName)}`
       );
       
       if (!response.data || !response.data.signed_url) {
+        console.error('Invalid signed URL response:', response.data);
         throw new Error('Invalid signed URL response');
       }
 
+      console.log('Received signed URL:', response.data.signed_url);
       const newSignedUrl = response.data.signed_url;
       
       // Validate the URL
       try {
         new URL(newSignedUrl);
       } catch (e) {
+        console.error('Invalid URL format:', newSignedUrl);
         throw new Error('Invalid URL format received');
       }
       
@@ -161,11 +174,12 @@ const FarmerDetails: React.FC = () => {
       setImageLoadingStates(prev => ({ ...prev, [imagePath as string]: false }));
       return newSignedUrl;
     } catch (error) {
-      console.error('Error getting signed URL:', error);
+      console.error('Error getting signed URL for', imagePath, ':', error);
       
       // Retry up to 3 times with exponential backoff
       if (retryCount < 3) {
         const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return getImageUrl(imagePath, retryCount + 1);
       }
@@ -175,19 +189,22 @@ const FarmerDetails: React.FC = () => {
       
       // Fallback to token-based URL if signed URL fails
       const token = localStorage.getItem('keycloak-token');
-      const cleanPath = imagePath.replace(/^\//, ''); // Remove leading slash if present
-      return `${baseUrl}${cleanPath}?token=Bearer ${token}`;
+      const imageName = extractImageName(imagePath);
+      return `${baseUrl}${imageName}?token=Bearer ${token}`;
     }
   };
 
   const handleImageError = async (imagePath: string, imgElement: HTMLImageElement) => {
     try {
       if (!imageErrorStates[imagePath as string]) {
+        console.log('Handling image load error for:', imagePath);
+        
         // Clear any existing error state
         setImageErrorStates(prev => ({ ...prev, [imagePath as string]: false }));
         
         // Try to get a fresh URL
         const url = await getImageUrl(imagePath);
+        console.log('Received new URL for retry:', url);
         
         // Only set the new URL if we haven't hit an error state
         if (!imageErrorStates[imagePath as string]) {
@@ -206,24 +223,28 @@ const FarmerDetails: React.FC = () => {
     // Helper function to add image to promises
     const addImageToPromises = (image: string | null | undefined) => {
       if (image && !signedUrls[image]) {
+        console.log('Adding image to load queue:', image);
         urlPromises.set(image, getImageUrl(image));
       }
     };
 
     // Add POI images
     if (poiData) {
+      console.log('Loading POI images');
       addImageToPromises(poiData.poi_image_front_url);
       addImageToPromises(poiData.poi_image_back_url);
     }
 
     // Add POA images
     if (poaData) {
+      console.log('Loading POA images');
       addImageToPromises(poaData.poa_image_front_url);
       addImageToPromises(poaData.poa_image_back_url);
     }
 
     if (urlPromises.size > 0) {
       try {
+        console.log(`Loading ${urlPromises.size} images...`);
         const results = await Promise.allSettled(urlPromises.values());
         const newSignedUrls: Record<string, string> = { ...signedUrls };
         
@@ -231,6 +252,7 @@ const FarmerDetails: React.FC = () => {
         urlPromises.forEach((_, key) => {
           const result = results[i];
           if (result.status === 'fulfilled') {
+            console.log('Successfully loaded URL for:', key);
             newSignedUrls[key] = result.value;
           } else {
             console.error(`Failed to load URL for ${key}:`, result.reason);
@@ -337,14 +359,22 @@ const FarmerDetails: React.FC = () => {
 
   useEffect(() => {
     if (bio?.photo) {
+      console.log('Preloading bio photo:', bio.photo);
       getImageUrl(bio.photo)
         .then(url => {
+          console.log('Preloading image with URL:', url);
           // Preload the image
           const img = new Image();
           img.src = url;
           return new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
+            img.onload = () => {
+              console.log('Bio photo preloaded successfully');
+              resolve(undefined);
+            };
+            img.onerror = (error) => {
+              console.error('Failed to preload bio photo:', error);
+              reject(error);
+            };
           });
         })
         .catch(error => {
