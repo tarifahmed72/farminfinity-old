@@ -18,8 +18,19 @@ export default defineConfig({
         target: 'https://dev-api.farmeasytechnologies.com',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Origin', 'https://farmin.vercel.app');
+            proxyReq.setHeader('Referer', 'https://farmin.vercel.app/');
+          });
+        }
       }
     }
+  },
+  preview: {
+    port: 3000,
+    host: true,
+    strictPort: true,
   }
 })

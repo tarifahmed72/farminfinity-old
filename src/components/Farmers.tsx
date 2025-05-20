@@ -45,13 +45,13 @@ const Farmers = () => {
   // Check authentication on mount
   useEffect(() => {
     if (!isAuthenticated()) {
-      navigate('/login');
+      navigate('/');
       return;
     }
 
     const userType = getUserType();
     if (!userType || !['ADMIN', 'AGENT'].includes(userType)) {
-      navigate('/login');
+      navigate('/');
       return;
     }
   }, [navigate]);
@@ -72,10 +72,15 @@ const Farmers = () => {
           url += `&status=${status}`;
         }
 
-        console.debug('Fetching farmers:', { url, query, status, page });
+        if (import.meta.env.DEV) {
+          console.debug('Fetching farmers:', { url, query, status, page });
+        }
 
         const response = await axiosInstance.get(url);
-        console.debug('Farmers response:', response.data);
+        
+        if (import.meta.env.DEV) {
+          console.debug('Farmers response:', response.data);
+        }
 
         if (!response.data || !Array.isArray(response.data.data)) {
           throw new Error('Invalid response format from server');
@@ -99,13 +104,25 @@ const Farmers = () => {
         setError(null);
       } catch (error: any) {
         console.error("Error fetching farmers:", error);
-        const errorMessage = error.response?.data?.detail || error.message || "Failed to fetch farmers data. Please try again.";
-        setError(errorMessage);
-        setFarmers([]);
-
-        // If unauthorized, redirect to login
+        
+        // Handle specific error cases
         if (error.response?.status === 401) {
-          navigate('/login');
+          setError('Your session has expired. Please login again.');
+          navigate('/');
+        } else if (error.response?.status === 403) {
+          setError('You do not have permission to view farmers.');
+          navigate('/');
+        } else if (error.response?.status === 404) {
+          setError('No farmers found.');
+          setFarmers([]);
+          setTotalItems(0);
+          setTotalPages(1);
+        } else if (error.code === 'ECONNABORTED') {
+          setError('Request timed out. Please try again.');
+        } else if (!error.response) {
+          setError('Network error. Please check your connection and try again.');
+        } else {
+          setError(error.response?.data?.detail || error.message || "Failed to fetch farmers data. Please try again.");
         }
       } finally {
         setSearchLoading(false);
