@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
+import { clearTokens } from '../utils/auth';
 
 const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear the authentication token
-    localStorage.removeItem('token');
-    // Redirect to login page (assuming it's at '/login')
-    navigate('/login');
+    clearTokens();
+    navigate('/');
   };
 
   return (

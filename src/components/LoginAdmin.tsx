@@ -16,18 +16,24 @@ export default function LoginAdmin() {
       setLoading(true);
       setError('');
 
-      // Create form data
+      // Create form data with exact parameter names
       const formData = new URLSearchParams();
+      formData.append('grant_type', 'password');
       formData.append('username', username);
       formData.append('password', password);
-      formData.append('user_type', 'ADMIN');
 
-      const response = await axios.post('https://dev-api.farmeasytechnologies.com/api/login', 
-        formData.toString(),
+      const response = await axios.post(
+        'https://dev-api.farmeasytechnologies.com/api/login',
+        formData,
         {
           headers: {
+            'Accept': '*/*',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
+            'Origin': 'https://farmin.vercel.app',
+            'Host': 'dev-api.farmeasytechnologies.com',
+            'Connection': 'keep-alive'
           }
         }
       );
@@ -39,7 +45,7 @@ export default function LoginAdmin() {
         setTokens({
           access_token: data.access_token,
           refresh_token: data.refresh_token || '',
-          token_type: 'Bearer',
+          token_type: data.token_type || 'Bearer',
           expires_in: data.expires_in || 3600
         });
         // Redirect to dashboard
@@ -48,8 +54,13 @@ export default function LoginAdmin() {
         throw new Error('Invalid response from server');
       }
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.detail || err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err.response?.data || err);
+      setError(
+        err.response?.data?.detail || 
+        err.response?.data?.message || 
+        err.message || 
+        'Login failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
