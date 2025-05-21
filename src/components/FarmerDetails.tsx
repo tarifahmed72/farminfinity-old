@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosInstance from '../utils/axios';
 import FarmerKyc from "./FarmerKyc";
-import ScoreCard from "./Scorecard";
+import ScoreCardContainer from './ScoreCardContainer';
 import ReportRemark from './ReportRemark';
 import FamilyMembers from './FamilyMembers';
 import { 
@@ -111,7 +111,7 @@ const FarmerDetails: React.FC = () => {
   const [poa, setPoa] = useState<POAData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'secondary' | 'scorecard' | 'remarks'>('profile');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
@@ -385,7 +385,7 @@ const FarmerDetails: React.FC = () => {
   }, [bio?.photo]);
 
   const handleTabClick = (
-    tab: 'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'
+    tab: 'profile' | 'kyc' | 'activities' | 'secondary' | 'scorecard' | 'remarks'
   ) => {
     setActiveTab(tab);
   };
@@ -526,7 +526,8 @@ const FarmerDetails: React.FC = () => {
               {[
                 { id: 'profile', label: 'Profile', icon: FaUser },
                 { id: 'kyc', label: 'KYC', icon: FaIdCard },
-                { id: 'activities', label: 'Activities', icon: FaClipboardList },
+                { id: 'activities', label: 'Primary Activity', icon: FaClipboardList },
+                { id: 'secondary', label: 'Secondary Activity', icon: FaClipboardList },
                 { id: 'scorecard', label: 'Score Card', icon: FaChartLine },
                 { id: 'remarks', label: 'Remarks', icon: FaClipboardList },
               ].map(({ id, label, icon: Icon }) => (
@@ -935,7 +936,23 @@ const FarmerDetails: React.FC = () => {
 
             {activeTab === 'activities' && applicationId && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <FarmerKyc applicationId={applicationId} />
+                <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Primary Activity</h3>
+                </div>
+                <div className="p-6">
+                  <FarmerKyc applicationId={applicationId} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'secondary' && applicationId && (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Secondary Activity</h3>
+                </div>
+                <div className="p-6">
+                  <FarmerKyc applicationId={applicationId} />
+                </div>
               </div>
             )}
 
@@ -946,7 +963,7 @@ const FarmerDetails: React.FC = () => {
                     <h3 className="text-lg font-semibold text-white">Score Card</h3>
                   </div>
                   <div className="p-6">
-                    <ScoreCard farmerId={farmerId} applicationId={applicationId} financialYear={"2024-25"} />
+                    <ScoreCardContainer farmerId={farmerId || ''} applicationId={applicationId || ''} financialYear={"2024-25"} />
                   </div>
                 </div>
               </div>

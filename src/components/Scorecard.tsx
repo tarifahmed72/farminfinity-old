@@ -1,88 +1,148 @@
-import { useEffect, useState } from "react";
-import { FaSpinner, FaExclamationTriangle } from "react-icons/fa";
-import DOMPurify from "dompurify";
+import React from 'react';
+import { Box, Typography, Paper, Grid, LinearProgress, Chip } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
 interface ScoreCardProps {
-  farmerId: string | undefined;
-  applicationId: string | undefined;
-  financialYear: string;
+  data: {
+    financial_year: string;
+    masked: {
+      score_card_info: {
+        score: number;
+        grade: string;
+        sub_grade: string;
+      };
+      basic_info: {
+        name: string;
+        gender: string;
+        dob: string;
+        phone: string;
+      };
+    };
+  };
 }
 
-export default function ScoreCard({ farmerId, applicationId, financialYear }: ScoreCardProps) {
-  const [htmlContent, setHtmlContent] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+}));
 
-  useEffect(() => {
-    async function fetchScoreCard() {
-      try {
-        setLoading(true);
-        setError("");
+const ScoreGauge = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '100%',
+  height: '20px',
+  marginTop: theme.spacing(2),
+  marginBottom: theme.spacing(4),
+}));
 
-        if (!farmerId || !applicationId || !financialYear) {
-          throw new Error("Missing required parameters");
-        }
+const calculateScorePercentage = (score: number): number => {
+  // Score range is 300-900, so normalize to 0-100%
+  return ((score - 300) / (900 - 300)) * 100;
+};
 
-        const url = `https://baupmo41v5.execute-api.ap-south-1.amazonaws.com/dev/api/scorecard?farmerId=${farmerId}&applicationId=${applicationId}&financialYear=${financialYear}`;
+const getScoreColor = (grade: string): string => {
+  const colors: { [key: string]: string } = {
+    'A': '#4CAF50',
+    'B': '#8BC34A',
+    'C': '#FFC107',
+    'D': '#FF9800',
+    'E': '#F44336',
+  };
+  return colors[grade] || '#757575';
+};
 
-        const response = await fetch(url.toString());
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const text = await response.text();
-        
-        if (!text) {
-          throw new Error("No data received from server");
-        }
-
-        // Sanitize HTML content before setting it
-        const sanitizedHtml = DOMPurify.sanitize(text);
-        setHtmlContent(sanitizedHtml);
-      } catch (err) {
-        console.error("Failed to fetch Score Card:", err);
-        setError(err instanceof Error ? err.message : "Failed to load Score Card");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchScoreCard();
-  }, [farmerId, applicationId, financialYear]);
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-4 bg-red-50 rounded-lg">
-        <FaExclamationTriangle className="text-red-500 mr-2" />
-        <p className="text-red-600">{error}</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <FaSpinner className="animate-spin text-blue-500 mr-2" />
-        <p className="text-gray-600">Loading Score Card...</p>
-      </div>
-    );
-  }
-
-  if (!htmlContent) {
-    return (
-      <div className="text-center p-4 bg-gray-50 rounded-lg">
-        <p className="text-gray-600">No score card data available.</p>
-      </div>
-    );
-  }
+const ScoreCard: React.FC<ScoreCardProps> = ({ data }) => {
+  const scorePercentage = calculateScorePercentage(data.masked.score_card_info.score);
+  const scoreColor = getScoreColor(data.masked.score_card_info.grade);
 
   return (
-    <div className="w-full overflow-x-auto bg-white rounded-lg shadow">
-      <div
-        className="p-4"
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-      />
-    </div>
+    <StyledPaper>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Typography variant="h6" gutterBottom>
+            Credit Score Card - {data.financial_year}
+          </Typography>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Box textAlign="center" mb={3}>
+            <Typography variant="h3" style={{ color: scoreColor, fontWeight: 'bold' }}>
+              {data.masked.score_card_info.score}
+            </Typography>
+            <Typography variant="subtitle1" gutterBottom>
+              Credit Score
+            </Typography>
+            <Box display="flex" gap={1} justifyContent="center" mt={1}>
+              <Chip 
+                label={`Grade ${data.masked.score_card_info.grade}`}
+                style={{ backgroundColor: scoreColor, color: 'white' }}
+              />
+              <Chip 
+                label={`Sub Grade ${data.masked.score_card_info.sub_grade}`}
+                variant="outlined"
+                style={{ borderColor: scoreColor, color: scoreColor }}
+              />
+            </Box>
+          </Box>
+          
+          <ScoreGauge>
+            <LinearProgress
+              variant="determinate"
+              value={scorePercentage}
+              sx={{
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: '#e0e0e0',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: scoreColor,
+                  borderRadius: 10,
+                },
+              }}
+            />
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              mt={1}
+              sx={{ color: 'text.secondary' }}
+            >
+              <Typography variant="caption">300</Typography>
+              <Typography variant="caption">900</Typography>
+            </Box>
+          </ScoreGauge>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Basic Information
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="body1">
+                  <strong>Name:</strong> {data.masked.basic_info.name}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="body1">
+                  <strong>Gender:</strong> {data.masked.basic_info.gender}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="body1">
+                  <strong>Date of Birth:</strong> {data.masked.basic_info.dob}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="body1">
+                  <strong>Phone:</strong> {data.masked.basic_info.phone}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        </Grid>
+      </Grid>
+    </StyledPaper>
   );
-}
+};
+
+export default ScoreCard;
