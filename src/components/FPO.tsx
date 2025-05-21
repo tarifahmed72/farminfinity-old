@@ -3,6 +3,7 @@ import { AxiosResponse } from 'axios';
 import axiosInstance from '../utils/axios';
 import axios from 'axios';
 import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaFileAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
+import { API_CONFIG } from '../config/api';
 
 interface FPOData {
   id: string;
@@ -53,7 +54,7 @@ const FPO = () => {
     if (!filename) return null;
     try {
       const response = await axios.get<SignedUrlResponse>(
-        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${filename}`
+        `${API_CONFIG.BASE_URL}/gcs-get-signed-image-url/${filename}`
       );
       return response.data.signed_url;
     } catch (error) {

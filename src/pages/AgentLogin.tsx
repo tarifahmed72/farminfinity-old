@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setTokens } from '../utils/auth';
 import axios from 'axios';
-
-const BASE_URL = 'https://dev-api.farmeasytechnologies.com/api';
+import { API_CONFIG } from '../config/api';
 
 export default function AgentLogin() {
   const navigate = useNavigate();
@@ -23,7 +22,7 @@ export default function AgentLogin() {
       setLoading(true);
       setError('');
       
-      const response = await axios.post(`${BASE_URL}/send-otp`, {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/send-otp`, {
         phone_number: phoneNumber.trim(),
         user_type: "AGENT"
       }, {
@@ -55,7 +54,7 @@ export default function AgentLogin() {
       setLoading(true);
       setError('');
 
-      const response = await axios.post(`${BASE_URL}/verify-otp`, {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/verify-otp`, {
         phone_number: phoneNumber.trim(),
         otp: otp.trim(),
         user_type: "AGENT"

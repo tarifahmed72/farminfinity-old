@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import { API_CONFIG } from '../config/api';
 
 interface FarmerKycProps {
   applicationId: string;
@@ -28,7 +29,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
 
   // Get token from localStorage
   const token = localStorage.getItem('keycloak-token');
-  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
+  const baseUrl = API_CONFIG.BASE_URL + "/uploads/";
 
   const getImageUrl = async (imagePath: string): Promise<string> => {
     if (!imagePath) return '';
