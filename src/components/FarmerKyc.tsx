@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import { API_CONFIG } from '../config/api';
 
 interface FarmerKycProps {
   applicationId: string;
+  financialYear: string;
 }
 
 type Activity = {
@@ -19,9 +20,8 @@ interface SignedUrlResponse {
   signed_url: string;
 }
 
-const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
+const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) => {
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [financialYear, setFinancialYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
@@ -105,34 +105,31 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     }
   };
 
-  const fetchActivity = async (selectedYear: string) => {
-    if (!applicationId) return;
-    try {
-      setLoading(true);
-      setErrorMsg('');
-      setActivity(null);
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (!applicationId || !financialYear) return;
+      try {
+        setLoading(true);
+        setErrorMsg('');
+        setActivity(null);
 
-      const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${selectedYear}`);
-      
-      if (!data || Object.keys(data).length === 0) {
-        setErrorMsg('No activity data available for selected financial year.');
-      } else {
-        await loadSignedUrls(data);
-        setActivity(data);
+        const { data } = await axiosInstance.get(`/fetch-activity-data/?application_id=${applicationId}&financial_year=${financialYear}`);
+
+        if (!data || Object.keys(data).length === 0) {
+          setErrorMsg('No activity data available for selected financial year.');
+        } else {
+          await loadSignedUrls(data);
+          setActivity(data);
+        }
+      } catch (error) {
+        console.error('Error fetching activity:', error);
+        setErrorMsg('Failed to fetch activity data.');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching activity:', error);
-      setErrorMsg('Failed to fetch activity data.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const year = e.target.value;
-    setFinancialYear(year);
-    if (year) fetchActivity(year);
-  };
+    };
+    if (financialYear) fetchActivity();
+  }, [applicationId, financialYear]);
 
   const renderSeasons = (seasons: any[]) => {
     if (!seasons?.length) return null;
@@ -393,46 +390,16 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     );
   };
 
-  if (loading) {
+  if (!financialYear) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <FaSpinner className="h-8 w-8 animate-spin text-green-600 mb-4" />
-        <p className="text-gray-600">Loading activity data...</p>
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <p className="text-gray-500">Please select a financial year to view activity data.</p>
       </div>
     );
   }
-
-  if (errorMsg) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <FaSpinner className="h-12 w-12 text-red-400 mx-auto mb-4" />
-        <p className="text-red-600">{errorMsg}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
-      {/* Year Selection */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Activities</h2>
-          <label className="block mb-3 font-medium text-gray-700">Select Financial Year:</label>
-          <select
-            className="border p-3 rounded-md w-72 shadow-sm focus:ring-2 focus:ring-green-400"
-            value={financialYear}
-            onChange={handleYearChange}
-          >
-            <option value="">-- Select Year --</option>
-            <option value="2025-26">2025-26</option>
-            <option value="2024-25">2024-25</option>
-            <option value="2023-24">2023-24</option>
-            <option value="2022-23">2022-23</option>
-            <option value="2021-22">2021-22</option>
-            <option value="2020-21">2020-21</option>
-          </select>
-        </section>
-
         <section>
           {loading ? (
             <div className="flex items-center justify-center p-8">
@@ -449,7 +416,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             </div>
           ) : (
             <div className="bg-gray-50 p-6 rounded-lg">
-              <p className="text-gray-500">Please select a financial year to view activity data.</p>
+              <p className="text-gray-500">No activity data available for the selected year.</p>
             </div>
           )}
         </section>

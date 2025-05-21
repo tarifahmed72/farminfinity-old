@@ -20,7 +20,8 @@ import {
   FaVenusMars,
   FaIdBadge,
   FaSearch,
-  FaHome
+  FaHome,
+  FaLeaf
 } from 'react-icons/fa';
 
 interface Bio {
@@ -112,11 +113,11 @@ const FarmerDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'>('profile');
-  const [selectedActivityTab, setSelectedActivityTab] = useState<'primary' | 'secondary'>('primary');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
   const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({});
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>('');
 
   const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
 
@@ -528,8 +529,6 @@ const FarmerDetails: React.FC = () => {
                 { id: 'profile', label: 'Profile', icon: FaUser },
                 { id: 'kyc', label: 'KYC', icon: FaIdCard },
                 { id: 'activities', label: 'Activities', icon: FaClipboardList },
-                { id: 'scorecard', label: 'Score Card', icon: FaChartLine },
-                { id: 'remarks', label: 'Remarks', icon: FaClipboardList },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -935,81 +934,82 @@ const FarmerDetails: React.FC = () => {
             )}
 
             {activeTab === 'activities' && applicationId && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-                    <h3 className="text-lg font-semibold text-white">Activities</h3>
+              <div className="space-y-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-500 to-green-500 px-8 py-6 flex items-center gap-4">
+                    <FaClipboardList className="h-7 w-7 text-white" />
+                    <h3 className="text-2xl font-bold text-white tracking-wide">Activities</h3>
                   </div>
-                  
-                  {/* Sub-tabs for Primary and Secondary Activities */}
-                  <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8 px-6" aria-label="Activity Tabs">
-                      <button
-                        onClick={() => setSelectedActivityTab('primary')}
-                        className={`${
-                          selectedActivityTab === 'primary'
-                            ? 'border-green-500 text-green-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors duration-200`}
-                      >
-                        <FaClipboardList className={`h-5 w-5 ${selectedActivityTab === 'primary' ? 'text-green-500' : 'text-gray-400'}`} />
-                        <span>Primary Activity</span>
-                      </button>
-                      <button
-                        onClick={() => setSelectedActivityTab('secondary')}
-                        className={`${
-                          selectedActivityTab === 'secondary'
-                            ? 'border-green-500 text-green-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors duration-200`}
-                      >
-                        <FaClipboardList className={`h-5 w-5 ${selectedActivityTab === 'secondary' ? 'text-green-500' : 'text-gray-400'}`} />
-                        <span>Secondary Activity</span>
-                      </button>
-                    </nav>
+                  {/* Financial Year Selector */}
+                  <div className="px-8 pt-8 pb-4 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
+                    <label className="block font-semibold text-gray-700 text-lg">Select Financial Year:</label>
+                    <select
+                      className="border-2 border-green-400 p-3 rounded-lg w-72 shadow focus:ring-2 focus:ring-green-400 text-lg font-medium bg-gray-50 hover:bg-white transition"
+                      value={selectedFinancialYear}
+                      onChange={e => setSelectedFinancialYear(e.target.value)}
+                    >
+                      <option value="">-- Select Year --</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2024-25">2024-25</option>
+                      <option value="2023-24">2023-24</option>
+                      <option value="2022-23">2022-23</option>
+                      <option value="2021-22">2021-22</option>
+                      <option value="2020-21">2020-21</option>
+                    </select>
                   </div>
 
-                  <div className="p-6">
-                    {selectedActivityTab === 'primary' && (
-                      <div>
-                        <FarmerKyc applicationId={applicationId} />
+                  {/* Score Card and Remarks */}
+                  {selectedFinancialYear && (
+                    <div className="flex flex-col md:flex-row gap-8 px-8 pb-8">
+                      <div className="flex-1">
+                        <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+                          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 flex items-center gap-2">
+                            <FaChartLine className="h-5 w-5 text-white" />
+                            <h3 className="text-lg font-semibold text-white">Score Card</h3>
+                          </div>
+                          <div className="p-6">
+                            <ScoreCardContainer farmerId={farmerId || ''} applicationId={applicationId || ''} financialYear={selectedFinancialYear} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+                          <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex items-center gap-2">
+                            <FaClipboardList className="h-5 w-5 text-white" />
+                            <h3 className="text-lg font-semibold text-white">Remarks</h3>
+                          </div>
+                          <div className="p-6">
+                            <ReportRemark 
+                              farmerId={farmerId || ''} 
+                              applicationId={applicationId || ''} 
+                              financialYear={selectedFinancialYear} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  {selectedFinancialYear && <div className="border-t border-gray-200 mx-8 my-4" />}
+
+                  {/* Activity Details */}
+                  <div className="px-8 pb-8">
+                    {selectedFinancialYear ? (
+                      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+                        <div className="bg-gradient-to-r from-green-500 to-blue-500 px-6 py-4 flex items-center gap-2">
+                          <FaLeaf className="h-5 w-5 text-white" />
+                          <h3 className="text-lg font-semibold text-white">Activity Details</h3>
+                        </div>
+                        <div className="p-6">
+                          <FarmerKyc applicationId={applicationId} financialYear={selectedFinancialYear} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 p-8 rounded-xl text-center text-gray-500 text-lg font-medium">
+                        Please select a financial year to view activity data, score card, and remarks.
                       </div>
                     )}
-                    {selectedActivityTab === 'secondary' && (
-                      <div>
-                        <FarmerKyc applicationId={applicationId} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'scorecard' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
-                    <h3 className="text-lg font-semibold text-white">Score Card</h3>
-                  </div>
-                  <div className="p-6">
-                    <ScoreCardContainer farmerId={farmerId || ''} applicationId={applicationId || ''} financialYear={"2024-25"} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'remarks' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
-                    <h3 className="text-lg font-semibold text-white">Remarks</h3>
-                  </div>
-                  <div className="p-6">
-                    <ReportRemark 
-                      farmerId={farmerId || ''} 
-                      applicationId={applicationId || ''} 
-                      financialYear="2024-25" 
-                    />
                   </div>
                 </div>
               </div>
