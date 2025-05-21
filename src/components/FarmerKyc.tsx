@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaCalendarAlt, FaLeaf, FaSpinner, FaTractor } from 'react-icons/fa';
+import { FaCalendarAlt, FaLeaf, FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import { API_CONFIG } from '../config/api';
 
@@ -349,56 +349,48 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
     if (!activity) return null;
 
     const { primary_activity_type, primary_activity, secondary_activity_type, secondary_activity } = activity;
-
-    // Show only Farming activities in primary tab
-    if (activeTab === 'primary') {
-      if (primary_activity_type.toLowerCase() === 'farming') {
-        return renderActivityDetails(primary_activity, primary_activity_type);
-      } else if (secondary_activity_type?.toLowerCase() === 'farming') {
-        return renderActivityDetails(secondary_activity, secondary_activity_type);
+    
+    const renderContent = () => {
+      if (activeTab === 'primary') {
+        return primary_activity && renderActivityDetails(primary_activity, primary_activity_type);
       } else {
-        return (
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <p className="text-gray-500">No farming activities found.</p>
-          </div>
-        );
+        return secondary_activity && secondary_activity_type && renderActivityDetails(secondary_activity, secondary_activity_type);
       }
-    }
+    };
 
-    // Show all non-farming activities in secondary tab
-    if (activeTab === 'secondary') {
-      const nonFarmingActivities = [];
-      
-      if (primary_activity_type.toLowerCase() !== 'farming') {
-        nonFarmingActivities.push({
-          type: primary_activity_type,
-          data: primary_activity
-        });
-      }
-      
-      if (secondary_activity_type && secondary_activity_type.toLowerCase() !== 'farming') {
-        nonFarmingActivities.push({
-          type: secondary_activity_type,
-          data: secondary_activity
-        });
-      }
-
-      return nonFarmingActivities.length > 0 ? (
-        <div className="space-y-8">
-          {nonFarmingActivities.map((activity, index) => (
-            <div key={index}>
-              {renderActivityDetails(activity.data, activity.type)}
+    return (
+      <div className="space-y-6">
+        <div className="flex gap-4">
+          <button
+            className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
+              activeTab === 'primary'
+                ? 'bg-green-500 text-white shadow-green-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+            onClick={() => setActiveTab('primary')}
+          >
+            <div className="flex items-center gap-2">
+              <FaLeaf className="h-4 w-4" />
+              <span>Primary Activity</span>
             </div>
-          ))}
+          </button>
+          <button
+            className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
+              activeTab === 'secondary'
+                ? 'bg-green-500 text-white shadow-green-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+            onClick={() => setActiveTab('secondary')}
+          >
+            <div className="flex items-center gap-2">
+              <FaLeaf className="h-4 w-4" />
+              <span>Secondary Activity</span>
+            </div>
+          </button>
         </div>
-      ) : (
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <p className="text-gray-500">No other activities found.</p>
-        </div>
-      );
-    }
-
-    return null;
+        {renderContent()}
+      </div>
+    );
   };
 
   if (loading) {
@@ -424,7 +416,8 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
       {/* Year Selection */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <section className="mb-8">
-          <label className="block mb-3 font-semibold text-lg">Select Financial Year:</label>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Activities</h2>
+          <label className="block mb-3 font-medium text-gray-700">Select Financial Year:</label>
           <select
             className="border p-3 rounded-md w-72 shadow-sm focus:ring-2 focus:ring-green-400"
             value={financialYear}
@@ -451,40 +444,9 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
               <p className="text-red-600">{errorMsg}</p>
             </div>
           ) : activity ? (
-            <>
-              {/* Tabs */}
-              <div className="flex gap-6 mb-8">
-                <button
-                  className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
-                    activeTab === 'primary'
-                      ? 'bg-green-500 text-white shadow-green-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                  onClick={() => setActiveTab('primary')}
-                >
-                  <div className="flex items-center gap-2">
-                    <FaLeaf className="h-4 w-4" />
-                    <span>Primary Activity</span>
-                  </div>
-                </button>
-                <button
-                  className={`px-5 py-2 rounded-full shadow-sm transition-all duration-200 ${
-                    activeTab === 'secondary'
-                      ? 'bg-blue-500 text-white shadow-blue-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                  onClick={() => setActiveTab('secondary')}
-                >
-                  <div className="flex items-center gap-2">
-                    <FaTractor className="h-4 w-4" />
-                    <span>Secondary Activity</span>
-                  </div>
-                </button>
-              </div>
-
-              {/* Activity Section */}
+            <div className="space-y-8">
               {renderActivitySection()}
-            </>
+            </div>
           ) : (
             <div className="bg-gray-50 p-6 rounded-lg">
               <p className="text-gray-500">Please select a financial year to view activity data.</p>
