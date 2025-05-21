@@ -1,46 +1,39 @@
 import { useNavigate } from 'react-router-dom';
+import { FaUserCog, FaUserTie } from 'react-icons/fa';
 
-export default function Home() {
+const Home = () => {
   const navigate = useNavigate();
 
-  const handleAdminLogin = () => {
-    navigate('/admin-login');
-  };
-
-  const handleAgentLogin = () => {
-    navigate('/agent-login');
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-green-800 mb-2">Farm Infinity</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+      <div className="w-full max-w-md px-6">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-green-700 mb-4">Farm Infinity</h1>
           <p className="text-gray-600">Choose your login method</p>
         </div>
 
         <div className="space-y-4">
+          {/* Admin Login Button */}
           <button
-            onClick={handleAdminLogin}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center justify-center"
+            onClick={() => navigate('/admin-login')}
+            className="w-full flex items-center justify-center gap-3 bg-green-600 text-white py-4 px-6 rounded-lg hover:bg-green-700 transition duration-200 shadow-lg hover:shadow-xl"
           >
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Login as Admin
+            <FaUserCog className="text-xl" />
+            <span className="text-lg font-medium">Login as Admin</span>
           </button>
 
+          {/* Agent Login Button */}
           <button
-            onClick={handleAgentLogin}
-            className="w-full bg-white hover:bg-gray-50 text-green-600 font-semibold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out border border-green-200 flex items-center justify-center"
+            onClick={() => navigate('/agent-login')}
+            className="w-full flex items-center justify-center gap-3 bg-white text-green-600 py-4 px-6 rounded-lg hover:bg-gray-50 transition duration-200 border-2 border-green-600 shadow-lg hover:shadow-xl"
           >
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            Login as Agent
+            <FaUserTie className="text-xl" />
+            <span className="text-lg font-medium">Login as Agent</span>
           </button>
         </div>
       </div>
     </div>
   );
-} 
+};
+
+export default Home; 
