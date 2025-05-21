@@ -431,9 +431,12 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
             onChange={handleYearChange}
           >
             <option value="">-- Select Year --</option>
+            <option value="2025-26">2025-26</option>
             <option value="2024-25">2024-25</option>
             <option value="2023-24">2023-24</option>
             <option value="2022-23">2022-23</option>
+            <option value="2021-22">2021-22</option>
+            <option value="2020-21">2020-21</option>
           </select>
         </section>
 
@@ -461,7 +464,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
                 >
                   <div className="flex items-center gap-2">
                     <FaLeaf className="h-4 w-4" />
-                    <span>Farming Activities</span>
+                    <span>Primary Activity</span>
                   </div>
                 </button>
                 <button
@@ -474,7 +477,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId }) => {
                 >
                   <div className="flex items-center gap-2">
                     <FaTractor className="h-4 w-4" />
-                    <span>Other Activities</span>
+                    <span>Secondary Activity</span>
                   </div>
                 </button>
               </div>
