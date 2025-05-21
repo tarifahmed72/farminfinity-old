@@ -111,7 +111,8 @@ const FarmerDetails: React.FC = () => {
   const [poa, setPoa] = useState<POAData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'secondary' | 'scorecard' | 'remarks'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'>('profile');
+  const [selectedActivityTab, setSelectedActivityTab] = useState<'primary' | 'secondary'>('primary');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
@@ -385,7 +386,7 @@ const FarmerDetails: React.FC = () => {
   }, [bio?.photo]);
 
   const handleTabClick = (
-    tab: 'profile' | 'kyc' | 'activities' | 'secondary' | 'scorecard' | 'remarks'
+    tab: 'profile' | 'kyc' | 'activities' | 'scorecard' | 'remarks'
   ) => {
     setActiveTab(tab);
   };
@@ -526,8 +527,7 @@ const FarmerDetails: React.FC = () => {
               {[
                 { id: 'profile', label: 'Profile', icon: FaUser },
                 { id: 'kyc', label: 'KYC', icon: FaIdCard },
-                { id: 'activities', label: 'Primary Activity', icon: FaClipboardList },
-                { id: 'secondary', label: 'Secondary Activity', icon: FaClipboardList },
+                { id: 'activities', label: 'Activities', icon: FaClipboardList },
                 { id: 'scorecard', label: 'Score Card', icon: FaChartLine },
                 { id: 'remarks', label: 'Remarks', icon: FaClipboardList },
               ].map(({ id, label, icon: Icon }) => (
@@ -935,23 +935,52 @@ const FarmerDetails: React.FC = () => {
             )}
 
             {activeTab === 'activities' && applicationId && (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Primary Activity</h3>
-                </div>
-                <div className="p-6">
-                  <FarmerKyc applicationId={applicationId} />
-                </div>
-              </div>
-            )}
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-white">Activities</h3>
+                  </div>
+                  
+                  {/* Sub-tabs for Primary and Secondary Activities */}
+                  <div className="border-b border-gray-200">
+                    <nav className="-mb-px flex space-x-8 px-6" aria-label="Activity Tabs">
+                      <button
+                        onClick={() => setSelectedActivityTab('primary')}
+                        className={`${
+                          selectedActivityTab === 'primary'
+                            ? 'border-green-500 text-green-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors duration-200`}
+                      >
+                        <FaClipboardList className={`h-5 w-5 ${selectedActivityTab === 'primary' ? 'text-green-500' : 'text-gray-400'}`} />
+                        <span>Primary Activity</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedActivityTab('secondary')}
+                        className={`${
+                          selectedActivityTab === 'secondary'
+                            ? 'border-green-500 text-green-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors duration-200`}
+                      >
+                        <FaClipboardList className={`h-5 w-5 ${selectedActivityTab === 'secondary' ? 'text-green-500' : 'text-gray-400'}`} />
+                        <span>Secondary Activity</span>
+                      </button>
+                    </nav>
+                  </div>
 
-            {activeTab === 'secondary' && applicationId && (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Secondary Activity</h3>
-                </div>
-                <div className="p-6">
-                  <FarmerKyc applicationId={applicationId} />
+                  <div className="p-6">
+                    {selectedActivityTab === 'primary' && (
+                      <div>
+                        <FarmerKyc applicationId={applicationId} />
+                      </div>
+                    )}
+                    {selectedActivityTab === 'secondary' && (
+                      <div>
+                        <FarmerKyc applicationId={applicationId} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
