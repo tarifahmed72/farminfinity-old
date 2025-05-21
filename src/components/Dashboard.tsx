@@ -1,61 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTokens } from '../utils/auth';
+import { FaUsers, FaBuilding, FaUserTie } from "react-icons/fa";
+import axiosInstance from '../utils/axios';
+
+interface DashboardStats {
+  totalFarmers: number;
+  totalFPOs: number;
+  totalAgents: number;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [farmerCount, setFarmerCount] = useState<number | null>(25);
-  const [fpoCount, setFpoCount] = useState<number | null>(null);
-  const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalFarmers: 0,
+    totalFPOs: 0,
+    totalAgents: 0,
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        const { access_token } = getTokens();
-        if (!access_token) {
-          throw new Error('No access token found');
-        }
-
-        // Fetch counts
-        const [farmers, fpos, agents] = await Promise.all([
-          fetch("https://dev-api.farmeasytechnologies.com/api/farmers/?page=1&limit=1", {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${access_token}`,
-              "Content-Type": "application/json",
-            },
-          }).then(res => res.json()),
-          
-          fetch("https://dev-api.farmeasytechnologies.com/api/fpos/?skip=0&limit=1000", {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${access_token}`,
-              "Content-Type": "application/json",
-            },
-          }).then(res => res.json()),
-        
-          fetch("https://dev-api.farmeasytechnologies.com/api/field_agents/?skip=0&limit=1000", {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${access_token}`,
-              "Content-Type": "application/json",
-            },
-          }).then(res => res.json()),
+        const [farmersRes, fposRes, agentsRes] = await Promise.all([
+          axiosInstance.get("/farmers/?page=1&limit=1"),
+          axiosInstance.get("/fpos/?skip=0&limit=1000"),
+          axiosInstance.get("/field_agents/?skip=0&limit=1000")
         ]);
-        
-        setFarmerCount(farmers.total || 0);
-        setFpoCount(fpos.length || 0);
-        setAgentCount(agents.length || 0);
+
+        setStats({
+          totalFarmers: farmersRes.data.total || 0,
+          totalFPOs: fposRes.data.total || 0,
+          totalAgents: agentsRes.data.total || 0,
+        });
       } catch (error) {
-        console.error("Failed to fetch data:", error);
+        console.error("Error fetching dashboard stats:", error);
         navigate('/login');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchStats();
   }, [navigate]);
 
   if (loading) {
@@ -76,20 +61,41 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-2">Glad to see you back!</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-100 p-6 rounded-lg shadow hover:shadow-lg transition">
-            <h2 className="text-lg font-semibold text-blue-800 mb-2">Total Farmers</h2>
-            <p className="text-3xl font-bold">{farmerCount ?? "N/A"}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 rounded-full">
+                <FaUsers className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-sm font-medium text-gray-600">Total Farmers</h2>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalFarmers}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-green-100 p-6 rounded-lg shadow hover:shadow-lg transition">
-            <h2 className="text-lg font-semibold text-green-800 mb-2">Total FPOs</h2>
-            <p className="text-3xl font-bold">{fpoCount ?? "N/A"}</p>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-green-100 rounded-full">
+                <FaBuilding className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-sm font-medium text-gray-600">Total FPOs</h2>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalFPOs}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-purple-100 p-6 rounded-lg shadow hover:shadow-lg transition">
-            <h2 className="text-lg font-semibold text-purple-800 mb-2">Total Field Agents</h2>
-            <p className="text-3xl font-bold">{agentCount ?? "N/A"}</p>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-purple-100 rounded-full">
+                <FaUserTie className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-sm font-medium text-gray-600">Total Agents</h2>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalAgents}</p>
+              </div>
+            </div>
           </div>
         </div>
 
