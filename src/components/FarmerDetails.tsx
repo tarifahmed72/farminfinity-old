@@ -958,7 +958,7 @@ const FarmerDetails: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Score Card and Remarks */}
+                  {/* Score Card and Report */}
                   {selectedFinancialYear && (
                     <div className="flex flex-col md:flex-row gap-8 px-8 pb-8">
                       <div className="flex-1">
@@ -976,7 +976,7 @@ const FarmerDetails: React.FC = () => {
                         <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
                           <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex items-center gap-2">
                             <FaClipboardList className="h-5 w-5 text-white" />
-                            <h3 className="text-lg font-semibold text-white">Remarks</h3>
+                            <h3 className="text-lg font-semibold text-white">Report</h3>
                           </div>
                           <div className="p-6">
                             <ReportRemark 
@@ -1007,7 +1007,7 @@ const FarmerDetails: React.FC = () => {
                       </div>
                     ) : (
                       <div className="bg-gray-50 p-8 rounded-xl text-center text-gray-500 text-lg font-medium">
-                        Please select a financial year to view activity data, score card, and remarks.
+                        Please select a financial year to view activity data, score card, and report.
                       </div>
                     )}
                   </div>
