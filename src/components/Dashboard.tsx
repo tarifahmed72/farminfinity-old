@@ -29,7 +29,7 @@ const Dashboard = () => {
 
         setStats({
           totalFarmers: farmersRes.data.total || 0,
-          totalFPOs: fposRes.data.total || 0,
+          totalFPOs: Array.isArray(fposRes.data) ? fposRes.data.length : (fposRes.data.total || 0),
           totalAgents: agentsRes.data.total || 0,
         });
       } catch (error) {
