@@ -15,6 +15,7 @@ import AgentLogin from './pages/AgentLogin';
 import AdminLogin from './pages/AdminLogin';
 import { isAuthenticated, getUserType, refreshAccessToken } from './utils/auth';
 import { useEffect } from 'react';
+import FieldAgentList from './components/FieldAgentList';
 
 // Protected Route component with improved auth handling
 const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { children: React.ReactNode, allowedUserTypes?: string[] }) => {
@@ -126,6 +127,14 @@ function App() {
             element={
               <ProtectedRoute allowedUserTypes={['ADMIN']}>
                 <BankAgent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/field-agents"
+            element={
+              <ProtectedRoute allowedUserTypes={['ADMIN']}>
+                <FieldAgentList />
               </ProtectedRoute>
             }
           />

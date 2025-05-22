@@ -58,10 +58,10 @@ const Sidebar = () => {
       description: "Producer Organizations"
     },
     {
-      title: "Agents",
+      title: "Field Agents",
       icon: FaUserSecret,
-      path: "/agent",
-      description: "Field Agents"
+      path: "/field-agents",
+      description: "Manage Field Agents"
     },
     {
       title: "Bank Agents",

@@ -7,6 +7,7 @@ interface DashboardStats {
   totalFarmers: number;
   totalFPOs: number;
   totalAgents: number;
+  totalFieldAgents: number;
 }
 
 const Dashboard = () => {
@@ -16,21 +17,24 @@ const Dashboard = () => {
     totalFarmers: 0,
     totalFPOs: 0,
     totalAgents: 0,
+    totalFieldAgents: 0,
   });
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [farmersRes, fposRes, agentsRes] = await Promise.all([
+        const [farmersRes, fposRes, agentsRes, fieldAgentsRes] = await Promise.all([
           axiosInstance.get("/farmers/?page=1&limit=1"),
           axiosInstance.get("/fpos/?skip=0&limit=1000"),
-          axiosInstance.get("/field_agents/?skip=0&limit=1000")
+          axiosInstance.get("/field_agents/?skip=0&limit=1000"),
+          axiosInstance.get("/field_agents/?skip=0&limit=1000"),
         ]);
 
         setStats({
           totalFarmers: farmersRes.data.total || 0,
           totalFPOs: Array.isArray(fposRes.data) ? fposRes.data.length : (fposRes.data.total || 0),
           totalAgents: agentsRes.data.total || 0,
+          totalFieldAgents: Array.isArray(fieldAgentsRes.data) ? fieldAgentsRes.data.length : (fieldAgentsRes.data.total || 0),
         });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -61,7 +65,7 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-2">Glad to see you back!</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-full">
@@ -94,6 +98,18 @@ const Dashboard = () => {
               <div className="ml-4">
                 <h2 className="text-sm font-medium text-gray-600">Total Agents</h2>
                 <p className="text-2xl font-semibold text-gray-900">{stats.totalAgents}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <FaUserTie className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-sm font-medium text-gray-600">Total Field Agents</h2>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalFieldAgents}</p>
               </div>
             </div>
           </div>
