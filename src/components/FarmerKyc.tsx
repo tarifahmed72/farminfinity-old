@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaLeaf, FaSpinner } from 'react-icons/fa';
+import { FaCalendarAlt, FaLeaf, FaSpinner, FaChartLine } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import { API_CONFIG } from '../config/api';
 
@@ -142,12 +142,26 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {seasons.map((season: any, idx: number) => (
             <div key={idx} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <h4 className="text-lg font-medium text-gray-900 mb-3">{season.season_name}</h4>
-              <div className="space-y-2 text-gray-600">
-                <p><span className="font-medium">Crops:</span> {season.crops.map((c: any) => c.crop_name).join(', ')}</p>
-                <p><span className="font-medium">Area:</span> {season.cultivation_area} {season.area_unit}</p>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-medium text-gray-900">{season.season_name}</h4>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Active
+                </span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <FaLeaf className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">
+                    {season.crops.map((c: any) => c.crop_name).join(', ')}
+                  </span>
+                </div>
                 {season.expected_yield && (
-                  <p><span className="font-medium">Expected Yield:</span> {season.expected_yield}</p>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <FaChartLine className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm">
+                      Expected: {season.expected_yield}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
