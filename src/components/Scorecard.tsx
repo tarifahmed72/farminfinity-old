@@ -36,8 +36,8 @@ const ScoreGauge = styled(Box)(({ theme }) => ({
 }));
 
 const calculateScorePercentage = (score: number): number => {
-  // Score range is 300-900, so normalize to 0-100%
-  return ((score - 300) / (900 - 300)) * 100;
+  // Score range is 0-1100, so normalize to 0-100%
+  return (score / 1100) * 100;
 };
 
 const getScoreColor = (grade: string): string => {
@@ -105,8 +105,8 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ data }) => {
               mt={1}
               sx={{ color: 'text.secondary' }}
             >
-              <Typography variant="caption">300</Typography>
-              <Typography variant="caption">900</Typography>
+              <Typography variant="caption">0</Typography>
+              <Typography variant="caption">1100</Typography>
             </Box>
           </ScoreGauge>
         </Grid>
