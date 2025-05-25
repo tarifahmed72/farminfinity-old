@@ -21,6 +21,9 @@ interface ScoreCardData {
       gender: string;
       dob: string;
       phone: string;
+      email?: string;
+      village?: string;
+      state?: string;
     };
   };
   unmasked?: {
@@ -34,6 +37,9 @@ interface ScoreCardData {
       gender: string;
       dob: string;
       phone: string;
+      email?: string;
+      village?: string;
+      state?: string;
     };
   };
 }
@@ -63,6 +69,19 @@ const ScoreCardContainer: React.FC<ScoreCardContainerProps> = ({
         }
 
         const jsonData = await response.json();
+        // Ensure missing fields are present (default to empty string if missing)
+        const addMissingFields = (info: any) => ({
+          ...info,
+          email: info.email || '',
+          village: info.village || '',
+          state: info.state || '',
+        });
+        if (jsonData.masked && jsonData.masked.basic_info) {
+          jsonData.masked.basic_info = addMissingFields(jsonData.masked.basic_info);
+        }
+        if (jsonData.unmasked && jsonData.unmasked.basic_info) {
+          jsonData.unmasked.basic_info = addMissingFields(jsonData.unmasked.basic_info);
+        }
         setData(jsonData);
       } catch (err) {
         console.error('Error fetching Farm Infinity Score:', err);

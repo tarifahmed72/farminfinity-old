@@ -16,6 +16,9 @@ interface ScoreCardProps {
         gender: string;
         dob: string;
         phone: string;
+        email?: string;
+        village?: string;
+        state?: string;
       };
     };
   };
@@ -137,6 +140,27 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ data }) => {
                   <strong>Phone:</strong> {data.masked.basic_info.phone}
                 </Typography>
               </Grid>
+              {data.masked.basic_info.email && (
+                <Grid item xs={12}>
+                  <Typography variant="body1">
+                    <strong>Email:</strong> {data.masked.basic_info.email}
+                  </Typography>
+                </Grid>
+              )}
+              {data.masked.basic_info.village && (
+                <Grid item xs={12}>
+                  <Typography variant="body1">
+                    <strong>Village:</strong> {data.masked.basic_info.village}
+                  </Typography>
+                </Grid>
+              )}
+              {data.masked.basic_info.state && (
+                <Grid item xs={12}>
+                  <Typography variant="body1">
+                    <strong>State:</strong> {data.masked.basic_info.state}
+                  </Typography>
+                </Grid>
+              )}
             </Grid>
           </Box>
         </Grid>

@@ -305,14 +305,54 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
         case 'poultry':
         case 'duckery':
           return (
-            <>
-              <p><span className="font-semibold">Hens:</span> {data.no_of_hen || 0}</p>
-              <p><span className="font-semibold">Cocks:</span> {data.no_of_cock || 0}</p>
-              <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
-              <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'}</p>
-              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
-              <p><span className="font-semibold">Facility Dimension:</span> {data.coop_facility_dimension || 'N/A'}</p>
-            </>
+            <div className="space-y-4">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <p><span className="font-semibold">Hens:</span> {data.no_hen || 0}</p>
+                <p><span className="font-semibold">Cocks:</span> {data.no_cock || 0}</p>
+                <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
+                <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'} kg/day</p>
+                <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+                <p><span className="font-semibold">Facility Dimension:</span> {data.coop_facility_dimension || 'N/A'} sq ft</p>
+                {data.egg_laying_capacity !== null && (
+                  <p><span className="font-semibold">Egg Laying Capacity:</span> {data.egg_laying_capacity} eggs/day</p>
+                )}
+              </div>
+
+              {/* Facilities */}
+              {data.facilities && data.facilities.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Facilities:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.facilities.map((facility: any) => (
+                      <div key={facility.facility_id} className="bg-yellow-50 rounded-lg p-3">
+                        <p className="text-yellow-800">{facility.facility_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Activity Images */}
+              {data.images && data.images.length > 0 && renderImages(data.images, `${type} Images`)}
+
+              {/* Facility GPS Image */}
+              {data.facility_gps_image && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
+                  <img
+                    src={signedUrls[data.facility_gps_image] || ''}
+                    alt="Facility GPS"
+                    className="w-64 h-64 object-cover rounded-md shadow"
+                    loading="lazy"
+                    onError={async (e) => {
+                      const url = await getImageUrl(data.facility_gps_image);
+                      (e.target as HTMLImageElement).src = url;
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           );
         case 'plantation':
           return (

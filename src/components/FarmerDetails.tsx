@@ -29,6 +29,7 @@ interface Bio {
   dob?: string;
   email?: string;
   gender?: string | null;
+  primary_phone?: string | null;
   alt_phone?: string | null;
   full_address?: string | null;
   village?: string | null;
@@ -118,16 +119,22 @@ const FarmerDetails: React.FC = () => {
   const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({});
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>('');
 
-  const baseUrl = "https://dev-api.farmeasytechnologies.com/api/uploads/";
-
   const extractImageName = (imagePath: string): string => {
     // Handle "None" case
-    if (imagePath === "None") return "";
+    if (!imagePath || imagePath === "None") return "";
     
-    // Remove any leading slashes and the base URL if present
-    const cleanPath = imagePath.replace(/^\//, '').replace(baseUrl, '');
-    // Remove any query parameters
-    return cleanPath.split('?')[0];
+    // Handle full URLs
+    if (imagePath.startsWith('http')) {
+      const urlParts = imagePath.split('/');
+      return urlParts[urlParts.length - 1];
+    }
+    
+    // Extract just the filename from the path
+    const filename = imagePath.split('/').pop();
+    if (!filename) return "";
+
+    // Remove any query parameters if present
+    return filename.split('?')[0];
   };
 
   const getImageUrl = async (imagePath: string | null | undefined, retryCount = 0): Promise<string> => {
@@ -142,7 +149,7 @@ const FarmerDetails: React.FC = () => {
       setImageLoadingStates(prev => ({ ...prev, [imagePath]: true }));
       setImageErrorStates(prev => ({ ...prev, [imagePath]: false }));
       
-      // Extract just the image name from the path
+      // Extract just the filename from the path
       const imageName = extractImageName(imagePath);
       if (!imageName) {
         throw new Error('Invalid image path');
@@ -150,9 +157,9 @@ const FarmerDetails: React.FC = () => {
       
       console.log('Requesting signed URL for image:', imageName);
 
-      // Get a new signed URL
+      // Get a new signed URL using the correct endpoint format
       const response = await axiosInstance.get<SignedUrlResponse>(
-        `/gcs-get-signed-image-url/${encodeURIComponent(imageName)}`
+        `https://dev-api.farmeasytechnologies.com/api/gcs-get-signed-image-url/${encodeURIComponent(imageName)}`
       );
       
       if (!response.data?.signed_url) {
@@ -160,6 +167,7 @@ const FarmerDetails: React.FC = () => {
       }
 
       const newSignedUrl = response.data.signed_url;
+      console.log('Received signed URL:', newSignedUrl);
       
       // Cache the signed URL
       setSignedUrls(prev => ({
@@ -184,9 +192,7 @@ const FarmerDetails: React.FC = () => {
       setImageLoadingStates(prev => ({ ...prev, [imagePath]: false }));
       setImageErrorStates(prev => ({ ...prev, [imagePath]: true }));
       
-      // Fallback to direct URL if signed URL fails
-      const token = localStorage.getItem('keycloak-token');
-      return `${baseUrl}${imagePath}?token=Bearer ${token}`;
+      throw error;
     }
   };
 
@@ -212,7 +218,7 @@ const FarmerDetails: React.FC = () => {
       console.log('Received new URL for retry:', url);
       
       // Only update the image if it's still mounted and hasn't errored
-      if (imgElement && document.body.contains(imgElement) && !imageErrorStates[imagePath]) {
+      if (imgElement && document.body.contains(imgElement)) {
         imgElement.src = url;
       }
       
@@ -222,13 +228,6 @@ const FarmerDetails: React.FC = () => {
       console.error('Error handling image load failure:', error);
       setImageErrorStates(prev => ({ ...prev, [imagePath]: true }));
       setImageLoadingStates(prev => ({ ...prev, [imagePath]: false }));
-      
-      // Use fallback URL as last resort
-      if (imgElement && document.body.contains(imgElement)) {
-        const token = localStorage.getItem('keycloak-token');
-        const fallbackUrl = `${baseUrl}${imagePath}?token=Bearer ${token}`;
-        imgElement.src = fallbackUrl;
-      }
     }
   };
 
@@ -249,6 +248,7 @@ const FarmerDetails: React.FC = () => {
       
       // Get fresh URL starting with retry count 0
       const url = await getImageUrl(imagePath, 0);
+      console.log('Got fresh URL on retry:', url);
       
       // Update the signed URLs cache
       setSignedUrls(prev => ({ ...prev, [imagePath]: url }));
@@ -258,11 +258,6 @@ const FarmerDetails: React.FC = () => {
       console.error('Error retrying image load:', error);
       setImageErrorStates(prev => ({ ...prev, [imagePath]: true }));
       setImageLoadingStates(prev => ({ ...prev, [imagePath]: false }));
-      
-      // Use fallback URL
-      const token = localStorage.getItem('keycloak-token');
-      const fallbackUrl = `${baseUrl}${imagePath}?token=Bearer ${token}`;
-      setSignedUrls(prev => ({ ...prev, [imagePath]: fallbackUrl }));
     }
   };
 
@@ -285,11 +280,17 @@ const FarmerDetails: React.FC = () => {
       addImageToPromises(poiData.poi_image_back_url);
     }
 
-    // Add POA images
+    // Add POA images - ensure we're using the correct URL format
     if (poaData) {
       console.log('Loading POA images');
-      addImageToPromises(poaData.poa_image_front_url);
-      addImageToPromises(poaData.poa_image_back_url);
+      const poaFrontUrl = poaData.poa_image_front_url;
+      const poaBackUrl = poaData.poa_image_back_url;
+      
+      console.log('POA front URL:', poaFrontUrl);
+      console.log('POA back URL:', poaBackUrl);
+      
+      if (poaFrontUrl) addImageToPromises(poaFrontUrl);
+      if (poaBackUrl) addImageToPromises(poaBackUrl);
     }
 
     if (urlPromises.size > 0) {
@@ -307,9 +308,6 @@ const FarmerDetails: React.FC = () => {
             setImageErrorStates(prev => ({ ...prev, [key]: false }));
           } else {
             console.error(`Failed to load URL for ${key}:`, result.status === 'rejected' ? result.reason : 'No URL returned');
-            // Get fallback URL
-            const token = localStorage.getItem('keycloak-token');
-            newSignedUrls[key] = `${baseUrl}${key}?token=Bearer ${token}`;
             setImageErrorStates(prev => ({ ...prev, [key]: true }));
           }
           setImageLoadingStates(prev => ({ ...prev, [key]: false }));
@@ -323,12 +321,6 @@ const FarmerDetails: React.FC = () => {
         urlPromises.forEach((_, key) => {
           setImageErrorStates(prev => ({ ...prev, [key]: true }));
           setImageLoadingStates(prev => ({ ...prev, [key]: false }));
-          // Set fallback URLs
-          const token = localStorage.getItem('keycloak-token');
-          setSignedUrls(prev => ({
-            ...prev,
-            [key]: `${baseUrl}${key}?token=Bearer ${token}`
-          }));
         });
       }
     }
@@ -345,76 +337,92 @@ const FarmerDetails: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch Bio
+        // First fetch farmer details to get phone number
+        let farmerPhone = null;
+        try {
+          const farmerResponse = await axiosInstance.get(`/farmers/${farmerId}`);
+          console.log('Full farmer response:', farmerResponse);
+          // Access the phone number from the data property
+          farmerPhone = farmerResponse.data?.data?.phone_no;
+          console.log('Farmer phone fetched:', farmerPhone);
+        } catch (phoneError) {
+          console.error('Error fetching farmer phone:', phoneError);
+        }
+
+        // Then fetch Bio
         const bioHistoryResponse = await axiosInstance.get(
           `/bio-histories/${applicationId}?skip=0&limit=10`
         );
         console.log('Bio history response:', bioHistoryResponse.data);
         if (!bioHistoryResponse.data || bioHistoryResponse.data.length === 0) {
-          setError('No bio history found for this application.');
-          return;
+          throw new Error('No bio history found for this application.');
         }
+
         const bio_version_id = bioHistoryResponse.data[0].bio_version_id;
         const bioResponse = await axiosInstance.get(`/bio/${bio_version_id}`);
         console.log('Bio response:', bioResponse.data);
         if (!bioResponse.data) {
-          setError('No bio data found for this application.');
-          return;
+          throw new Error('No bio data found for this application.');
         }
-        setBio(bioResponse.data);
 
-        // Fetch KYC
-        const kycResponse = await axiosInstance.get(`/kyc-histories/${farmerId}`);
-        console.log('KYC response:', kycResponse.data);
-        if (!kycResponse.data || kycResponse.data.length === 0) {
-          setError('No KYC data found for this farmer.');
-          return;
-        }
-        setKyc(kycResponse.data[0]);
+        // Initialize bioData with bio response and set phone numbers
+        const bioData = {
+          ...bioResponse.data,
+          primary_phone: farmerPhone || bioResponse.data.primary_phone,
+          alt_phone: farmerPhone && bioResponse.data.primary_phone && bioResponse.data.primary_phone !== farmerPhone 
+            ? bioResponse.data.primary_phone 
+            : bioResponse.data.alt_phone
+        };
+        console.log('Setting bio data with phones:', { 
+          primary: bioData.primary_phone, 
+          alt: bioData.alt_phone,
+          farmerPhone: farmerPhone
+        });
+        setBio(bioData);
 
         let poiData = null;
         let poaData = null;
 
-        // Fetch POI
-        if (kycResponse.data[0].poi_version_id) {
-          const poiResponse = await axiosInstance.get(
-            `/poi/${kycResponse.data[0].poi_version_id}`
-          );
-          console.log('POI response:', poiResponse.data);
-          if (!poiResponse.data) {
-            setError('No POI data found for this farmer.');
-            return;
+        // Fetch KYC data
+        try {
+          const kycResponse = await axiosInstance.get(`/kyc-histories/${farmerId}`);
+          console.log('KYC response:', kycResponse.data);
+          if (kycResponse.data && kycResponse.data.length > 0) {
+            setKyc(kycResponse.data[0]);
+
+            // Fetch POI if available
+            if (kycResponse.data[0].poi_version_id) {
+              const poiResponse = await axiosInstance.get(
+                `/poi/${kycResponse.data[0].poi_version_id}`
+              );
+              if (poiResponse.data) {
+                poiData = poiResponse.data;
+                setPoi(poiData);
+              }
+            }
+
+            // Fetch POA if available
+            if (kycResponse.data[0].poa_version_id) {
+              const poaResponse = await axiosInstance.get(
+                `/poa/${kycResponse.data[0].poa_version_id}`
+              );
+              if (poaResponse.data) {
+                poaData = poaResponse.data;
+                setPoa(poaData);
+              }
+            }
+
+            // Load signed URLs for POI and POA images
+            await loadSignedUrls(poiData, poaData);
           }
-          poiData = poiResponse.data;
-          setPoi(poiData);
-        } else {
-          setError('No POI version ID found in KYC data.');
-          return;
+        } catch (kycError) {
+          console.error('Error fetching KYC data:', kycError);
+          setError('Failed to load KYC data. Some information may be missing.');
         }
 
-        // Fetch POA
-        if (kycResponse.data[0].poa_version_id) {
-          const poaResponse = await axiosInstance.get(
-            `/poa/${kycResponse.data[0].poa_version_id}`
-          );
-          console.log('POA response:', poaResponse.data);
-          if (!poaResponse.data) {
-            setError('No POA data found for this farmer.');
-            return;
-          }
-          poaData = poaResponse.data;
-          setPoa(poaData);
-        } else {
-          setError('No POA version ID found in KYC data.');
-          return;
-        }
-
-        // Load signed URLs for POI and POA images
-        await loadSignedUrls(poiData, poaData);
-
-      } catch (err: any) {
-        setError('Failed to fetch data: ' + (err?.message || err));
-        console.error('Fetch error:', err);
+      } catch (error: any) {
+        console.error('Error in fetchFarmerData:', error);
+        setError(error?.message || 'Failed to fetch farmer data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -610,8 +618,8 @@ const FarmerDetails: React.FC = () => {
                     <FaPhone className="h-5 w-5 text-purple-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Phone</p>
-                    <p className="mt-1 text-sm text-gray-900">{bio?.alt_phone || 'N/A'}</p>
+                    <p className="text-sm font-medium text-gray-500">Primary Phone</p>
+                    <p className="mt-1 text-sm text-gray-900">{bio?.primary_phone || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -666,7 +674,8 @@ const FarmerDetails: React.FC = () => {
                     { label: "Date of Birth", value: bio.dob, icon: FaCalendarAlt },
                     { label: "Gender", value: bio.gender, icon: FaVenusMars },
                     { label: "Email", value: bio.email, icon: FaEnvelope },
-                    { label: "Phone", value: bio.alt_phone, icon: FaPhone },
+                    { label: "Primary Phone", value: bio.primary_phone, icon: FaPhone },
+                    { label: "Alternate Phone", value: bio.alt_phone, icon: FaPhone },
                     { label: "Village", value: bio.village, icon: FaMapMarkerAlt },
                     { label: "District", value: bio.district, icon: FaMapMarkerAlt },
                     { label: "State", value: bio.state, icon: FaMapMarkerAlt },
@@ -951,7 +960,7 @@ const FarmerDetails: React.FC = () => {
                                       alt="POA Front"
                                       className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
                                       onClick={() => poa.poa_image_front_url && setSelectedImage(signedUrls[poa.poa_image_front_url] || '')}
-                                      onError={(e) => handleImageError(poa.poa_image_front_url, e.target as HTMLImageElement)}
+                                      onError={(e) => poa.poa_image_front_url && handleImageError(poa.poa_image_front_url, e.target as HTMLImageElement)}
                                     />
                                   )}
                                 </div>
@@ -987,7 +996,7 @@ const FarmerDetails: React.FC = () => {
                                       alt="POA Back"
                                       className="w-full h-48 object-cover rounded-lg shadow-sm border border-gray-200 transition-transform duration-200 group-hover:scale-105"
                                       onClick={() => poa.poa_image_back_url && setSelectedImage(signedUrls[poa.poa_image_back_url] || '')}
-                                      onError={(e) => handleImageError(poa.poa_image_back_url, e.target as HTMLImageElement)}
+                                      onError={(e) => poa.poa_image_back_url && handleImageError(poa.poa_image_back_url, e.target as HTMLImageElement)}
                                     />
                                   )}
                                 </div>
