@@ -185,8 +185,8 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
             <div className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-3">
-                <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
-                <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
+              <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
+              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
                 <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
                 <p><span className="font-semibold">Farm Storage Available:</span> {data.is_farm_storage_available ? 'Yes' : 'No'}</p>
                 <p><span className="font-semibold">Post Harvest Facilities:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
@@ -310,9 +310,9 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
               <div className="space-y-3">
                 <p><span className="font-semibold">Hens:</span> {data.no_hen || 0}</p>
                 <p><span className="font-semibold">Cocks:</span> {data.no_cock || 0}</p>
-                <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
                 <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'} kg/day</p>
-                <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
                 <p><span className="font-semibold">Facility Dimension:</span> {data.coop_facility_dimension || 'N/A'} sq ft</p>
                 {data.egg_laying_capacity !== null && (
                   <p><span className="font-semibold">Egg Laying Capacity:</span> {data.egg_laying_capacity} eggs/day</p>
@@ -359,7 +359,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
             <div className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-3">
-                <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
+              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
                 <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
                 <p><span className="font-semibold">Post Harvest Facilities:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
               </div>
@@ -458,10 +458,10 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
             <div className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-3">
-                <p><span className="font-semibold">No. of Cylinders:</span> {data.no_of_cylinders || 0}</p>
-                <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
+              <p><span className="font-semibold">No. of Cylinders:</span> {data.no_of_cylinders || 0}</p>
+              <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
                 <p><span className="font-semibold">Shed Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
-                <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
               </div>
 
               {/* Breeds */}

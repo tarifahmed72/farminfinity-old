@@ -1067,7 +1067,6 @@ const FarmerDetails: React.FC = () => {
                           </div>
                           <div className="p-6">
                             <ReportRemark 
-                              farmerId={farmerId || ''} 
                               applicationId={applicationId || ''} 
                               financialYear={selectedFinancialYear} 
                             />

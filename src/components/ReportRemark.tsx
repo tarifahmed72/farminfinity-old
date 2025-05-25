@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
-import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes, FaUpload, FaImage, FaFile } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import DOMPurify from 'dompurify';
 
 interface ReportRemarkProps {
-  farmerId: string;
   applicationId?: string;
   financialYear?: string;
 }
 
 interface ReportRemark {
   id: string;
-  farmer_id: string;
-  application_id: string;
-  financial_year: string;
-  remark: string;
+  farm_data_history_id: string;
+  remark_text: string;
+  uploads: string[];
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -22,7 +20,7 @@ interface ReportRemark {
   status?: 'active' | 'deleted';
 }
 
-export default function ReportRemark({ farmerId, applicationId, financialYear }: ReportRemarkProps) {
+export default function ReportRemark({ applicationId, financialYear }: ReportRemarkProps) {
   const [remarks, setRemarks] = useState<ReportRemark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,6 +30,8 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
   const [newRemark, setNewRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
 
   // Fetch remarks
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
         const response = await axiosInstance.get(`/report-remarks/${applicationId}/${financialYear}`, {
           params: {
             skip: 0,
-            limit: 50
+            limit: 10
           }
         });
 
@@ -87,9 +87,59 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
     };
   }, [applicationId, financialYear]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validate files
+    const validFiles = files.filter(file => {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setError('Each file must be less than 5MB');
+        return false;
+      }
+      if (!['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(file.type)) {
+        setError('Only JPG, JPEG, PNG & PDF files are allowed');
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setUploadFiles(prev => [...prev, ...validFiles]);
+      
+      // Create previews for images
+      validFiles.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setUploadPreviews(prev => [...prev, reader.result as string]);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          // For PDFs, just add a placeholder
+          setUploadPreviews(prev => [...prev, 'pdf']);
+        }
+      });
+      
+      setError('');
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Create new remark
   const createRemark = async () => {
-    if (!newRemark.trim() || !applicationId || !financialYear || isSubmitting) return;
+    if (!newRemark.trim() || !applicationId || !financialYear || isSubmitting) {
+      console.log('Validation failed:', { 
+        hasRemark: Boolean(newRemark.trim()), 
+        hasApplicationId: Boolean(applicationId), 
+        hasFinancialYear: Boolean(financialYear),
+        isSubmitting
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -97,27 +147,86 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
 
       const sanitizedRemark = DOMPurify.sanitize(newRemark.trim());
       
-      const response = await axiosInstance.post('/report-remark', {
-        farmer_id: farmerId,
-        application_id: applicationId,
-        financial_year: financialYear,
-        remark: sanitizedRemark,
-        status: 'active'
+      // Upload files first if any
+      const uploadedUrls: string[] = [];
+      
+      if (uploadFiles.length > 0) {
+        for (const file of uploadFiles) {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          try {
+            const uploadResponse = await axiosInstance.post('/gcs-upload', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+            
+            if (uploadResponse.data?.url) {
+              uploadedUrls.push(uploadResponse.data.url);
+              console.log('File uploaded successfully:', uploadResponse.data.url);
+            } else {
+              console.warn('Upload response missing URL:', uploadResponse.data);
+              throw new Error('Failed to get upload URL from server');
+            }
+          } catch (uploadErr: any) {
+            console.error('File upload failed:', {
+              file: file.name,
+              error: uploadErr.response?.data || uploadErr.message
+            });
+            throw new Error(`File upload failed: ${uploadErr.response?.data?.detail || uploadErr.message}`);
+          }
+        }
+      }
+      
+      // Create remark with uploaded files
+      const requestData = {
+        id: "1", // Using "1" as shown in the example
+        farm_data_history_id: applicationId, // Using the actual application ID
+        remark_text: sanitizedRemark,
+        uploads: uploadedUrls.length > 0 ? uploadedUrls : ["string"] // Using "string" as default value
+      };
+
+      console.log('Creating remark with data:', requestData);
+      
+      const response = await axiosInstance.post('/report-remark/', requestData, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.data) {
+        console.error('Empty response from server');
         throw new Error('No response received from server');
       }
+
+      console.log('Remark created successfully:', response.data);
 
       // Add new remark to the list
       setRemarks(prev => [response.data, ...prev]);
       setNewRemark('');
+      setUploadFiles([]);
+      setUploadPreviews([]);
       setIsAddingNew(false);
     } catch (err: any) {
-      console.error('Error creating remark:', err);
-      const errorMessage = err.response?.data?.detail || 
-                         err.response?.data?.message || 
-                         'Failed to create remark. Please try again.';
+      console.error('Error creating remark:', {
+        error: err,
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers
+      });
+      
+      let errorMessage = 'Failed to create remark. Please try again.';
+      
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -132,10 +241,16 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       setIsSubmitting(true);
       setError('');
 
-      const sanitizedRemark = DOMPurify.sanitize(selectedRemark.remark.trim());
+      const sanitizedRemark = DOMPurify.sanitize(selectedRemark.remark_text.trim());
       
       const response = await axiosInstance.put(`/report-remark/${selectedRemark.id}`, {
-        remark: sanitizedRemark
+        remark_text: sanitizedRemark,
+        uploads: selectedRemark.uploads
+      }, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.data) {
@@ -171,13 +286,11 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
       setIsSubmitting(true);
       setError('');
 
-      const response = await axiosInstance.patch(`/report-remark/${remarkId}`, {
-        status: 'deleted'
+      await axiosInstance.delete(`/report-remark/${remarkId}`, {
+        headers: {
+          'Accept': 'application/json'
+        }
       });
-
-      if (!response.data) {
-        throw new Error('No response received from server');
-      }
 
       // Remove the remark from the list
       setRemarks(prev => prev.filter(r => r.id !== remarkId));
@@ -272,11 +385,66 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
             rows={4}
             disabled={isSubmitting}
           />
+          
+          {/* File Upload Section */}
+          <div className="mt-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <FaUpload className="text-purple-600" />
+              <span className="text-sm font-medium text-gray-700">Attachments</span>
+            </div>
+            
+            {/* File Preview Grid */}
+            {uploadPreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {uploadPreviews.map((preview, index) => (
+                  <div key={index} className="relative">
+                    {preview === 'pdf' ? (
+                      <div className="h-24 w-full bg-gray-100 rounded-lg flex items-center justify-center">
+                        <FaFile className="h-8 w-8 text-gray-400" />
+                      </div>
+                    ) : (
+                      <img
+                        src={preview}
+                        alt={`Upload preview ${index + 1}`}
+                        className="h-24 w-full object-cover rounded-lg"
+                      />
+                    )}
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors duration-200"
+                    >
+                      <FaTimes className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            <label className="cursor-pointer inline-flex items-center space-x-2 px-4 py-2 border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors duration-200">
+              <FaImage className="text-purple-600" />
+              <span className="text-sm text-purple-600">Add Files</span>
+              <input
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={isSubmitting}
+              />
+            </label>
+            <p className="mt-1 text-xs text-gray-500">
+              Supported formats: JPG, JPEG, PNG, PDF (max 5MB each)
+            </p>
+          </div>
+
           <div className="mt-4 flex justify-end space-x-3">
             <button
               onClick={() => {
                 setIsAddingNew(false);
                 setNewRemark('');
+                setUploadFiles([]);
+                setUploadPreviews([]);
               }}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
               disabled={isSubmitting}
@@ -311,8 +479,8 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
             {isEditing && selectedRemark?.id === remark.id ? (
               <div>
                 <textarea
-                  value={selectedRemark.remark}
-                  onChange={(e) => setSelectedRemark({ ...selectedRemark, remark: e.target.value })}
+                  value={selectedRemark.remark_text}
+                  onChange={(e) => setSelectedRemark({ ...selectedRemark, remark_text: e.target.value })}
                   className="w-full p-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   rows={4}
                   disabled={isSubmitting}
@@ -330,7 +498,7 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
                   </button>
                   <button
                     onClick={updateRemark}
-                    disabled={!selectedRemark.remark.trim() || isSubmitting}
+                    disabled={!selectedRemark.remark_text.trim() || isSubmitting}
                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     {isSubmitting ? (
@@ -386,8 +554,42 @@ export default function ReportRemark({ farmerId, applicationId, financialYear }:
                   </div>
                 </div>
                 <div className="prose prose-sm max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">{remark.remark}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{remark.remark_text}</p>
                 </div>
+
+                {/* Display Uploaded Files */}
+                {remark.uploads && remark.uploads.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FaFile className="text-gray-400" />
+                      <span className="text-sm text-gray-600">Attachments</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {remark.uploads.map((url, index) => (
+                        <a
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="h-24 w-full bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors duration-200">
+                              <FaFile className="h-8 w-8 text-gray-400" />
+                            </div>
+                          ) : (
+                            <img
+                              src={url}
+                              alt={`Attachment ${index + 1}`}
+                              className="h-24 w-full object-cover rounded-lg hover:opacity-75 transition-opacity duration-200"
+                            />
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {remark.updated_at !== remark.created_at && (
                   <p className="text-xs text-gray-400 mt-2">
                     Last edited: {new Date(remark.updated_at).toLocaleDateString('en-US', {
