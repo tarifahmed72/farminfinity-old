@@ -189,7 +189,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
                 <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
                 <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
                 <p><span className="font-semibold">Farm Storage Available:</span> {data.is_farm_storage_available ? 'Yes' : 'No'}</p>
-                <p><span className="font-semibold">Post Harvest Storage:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+                <p><span className="font-semibold">Post Harvest Facilities:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
               </div>
 
               {/* Irrigation Types */}
@@ -321,7 +321,7 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
               <div className="space-y-3">
                 <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
                 <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
-                <p><span className="font-semibold">Post Harvest Facility:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+                <p><span className="font-semibold">Post Harvest Facilities:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
               </div>
 
               {/* Irrigations */}

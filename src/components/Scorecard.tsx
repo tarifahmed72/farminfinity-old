@@ -60,7 +60,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ data }) => {
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Typography variant="h6" gutterBottom>
-            Credit Score Card - {data.financial_year}
+            Farm Infinity Score - {data.financial_year}
           </Typography>
         </Grid>
         
@@ -70,7 +70,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ data }) => {
               {data.masked.score_card_info.score}
             </Typography>
             <Typography variant="subtitle1" gutterBottom>
-              Credit Score
+              Farm Infinity Score
             </Typography>
             <Box display="flex" gap={1} justifyContent="center" mt={1}>
               <Chip 

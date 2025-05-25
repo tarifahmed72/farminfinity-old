@@ -65,8 +65,8 @@ const ScoreCardContainer: React.FC<ScoreCardContainerProps> = ({
         const jsonData = await response.json();
         setData(jsonData);
       } catch (err) {
-        console.error('Error fetching score card:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load score card');
+        console.error('Error fetching Farm Infinity Score:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load Farm Infinity Score');
       } finally {
         setLoading(false);
       }
@@ -93,9 +93,9 @@ const ScoreCardContainer: React.FC<ScoreCardContainerProps> = ({
 
   if (!data) {
     return (
-      <Alert severity="info" sx={{ mt: 2 }}>
-        No score card data available.
-      </Alert>
+      <div className="text-center text-gray-500 p-4">
+        No Farm Infinity Score data available.
+      </div>
     );
   }
 
@@ -110,7 +110,7 @@ const ScoreCardContainer: React.FC<ScoreCardContainerProps> = ({
         onClick={() => setShowMasked((prev) => !prev)}
         sx={{ mb: 2 }}
       >
-        {showMasked ? 'Show Unmasked Score Card' : 'Show Masked Score Card'}
+        {showMasked ? 'Show Unmasked Farm Infinity Score' : 'Show Masked Farm Infinity Score'}
       </Button>
       <ScoreCard data={cardData} />
     </div>
