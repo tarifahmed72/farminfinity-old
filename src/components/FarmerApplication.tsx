@@ -60,7 +60,7 @@ const FarmerApplication: React.FC = () => {
       case 7:
         return { label: 'Re-submit', bgColor: 'bg-violet-500', foreColor: 'text-white' };
       default:
-        return { label: 'Unknown', bgColor: 'bg-gray-200', foreColor: 'text-black' };
+        return { label: 'Signup', bgColor: 'bg-gray-200', foreColor: 'text-black' };
     }
   };
 
