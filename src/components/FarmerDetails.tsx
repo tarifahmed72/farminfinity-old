@@ -337,13 +337,14 @@ const FarmerDetails: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // First fetch farmer details to get phone number
+        // First fetch farmer details to get phone number from the farmers endpoint
         let farmerPhone = null;
         try {
-          const farmerResponse = await axiosInstance.get(`/farmers/${farmerId}`);
-          console.log('Full farmer response:', farmerResponse);
-          // Access the phone number from the data property
-          farmerPhone = farmerResponse.data?.data?.phone_no;
+          const farmerResponse = await axiosInstance.get(`/farmers/?page=1&limit=20&sort=created_at:desc`);
+          console.log('Full farmers response:', farmerResponse);
+          // Find the matching farmer and get their phone number
+          const farmer = farmerResponse.data?.data?.find((f: any) => f.id === farmerId);
+          farmerPhone = farmer?.phone_no;
           console.log('Farmer phone fetched:', farmerPhone);
         } catch (phoneError) {
           console.error('Error fetching farmer phone:', phoneError);
@@ -366,18 +367,23 @@ const FarmerDetails: React.FC = () => {
         }
 
         // Initialize bioData with bio response and set phone numbers
+        // Always use farmerPhone as primary if available
         const bioData = {
           ...bioResponse.data,
-          primary_phone: farmerPhone || bioResponse.data.primary_phone,
-          alt_phone: farmerPhone && bioResponse.data.primary_phone && bioResponse.data.primary_phone !== farmerPhone 
-            ? bioResponse.data.primary_phone 
+          primary_phone: farmerPhone || bioResponse.data.primary_phone || 'N/A',
+          alt_phone: farmerPhone 
+            ? (bioResponse.data.primary_phone || bioResponse.data.alt_phone) 
             : bioResponse.data.alt_phone
         };
+
         console.log('Setting bio data with phones:', { 
           primary: bioData.primary_phone, 
           alt: bioData.alt_phone,
-          farmerPhone: farmerPhone
+          farmerPhone: farmerPhone,
+          originalPrimary: bioResponse.data.primary_phone,
+          originalAlt: bioResponse.data.alt_phone
         });
+        
         setBio(bioData);
 
         let poiData = null;

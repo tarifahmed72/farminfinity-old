@@ -47,7 +47,7 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
         setLoading(true);
         setError('');
         
-        const response = await axiosInstance.get(`/report-remarks/${applicationId}/${financialYear}`, {
+        const response = await axiosInstance.get(`report-remarks/${applicationId}/${financialYear}`, {
           params: {
             skip: 0,
             limit: 10
@@ -63,6 +63,7 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
           const sortedRemarks = response.data.sort((a: ReportRemark, b: ReportRemark) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           );
+          
           setRemarks(sortedRemarks);
         }
       } catch (err: any) {
@@ -156,18 +157,28 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
           formData.append('file', file);
           
           try {
-            const uploadResponse = await axiosInstance.post('/gcs-upload', formData, {
+            console.log('Uploading file:', file.name);
+            
+            // Upload file to GCS first
+            const uploadResponse = await axiosInstance.post('gcs-upload/', formData, {
               headers: {
                 'Content-Type': 'multipart/form-data',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('keycloak-token')}`
               },
             });
             
-            if (uploadResponse.data?.url) {
-              uploadedUrls.push(uploadResponse.data.url);
-              console.log('File uploaded successfully:', uploadResponse.data.url);
+            if (uploadResponse.data?.filename) {
+              // Construct the URL using the filename from GCS upload response
+              const fileUrl = `https://dev-api.farmeasytechnologies.com/uploads/${uploadResponse.data.filename}`;
+              uploadedUrls.push(fileUrl);
+              console.log('File uploaded successfully:', {
+                filename: uploadResponse.data.filename,
+                url: fileUrl
+              });
             } else {
-              console.warn('Upload response missing URL:', uploadResponse.data);
-              throw new Error('Failed to get upload URL from server');
+              console.warn('Upload response missing filename:', uploadResponse.data);
+              throw new Error('Failed to get filename from upload');
             }
           } catch (uploadErr: any) {
             console.error('File upload failed:', {
@@ -179,17 +190,17 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
         }
       }
       
-      // Create remark with uploaded files
+      // Create remark with the complete URLs
       const requestData = {
-        id: "1", // Using "1" as shown in the example
-        farm_data_history_id: applicationId, // Using the actual application ID
+        id: '', // Empty string as shown in the API docs
+        farm_data_history_id: applicationId,
         remark_text: sanitizedRemark,
-        uploads: uploadedUrls.length > 0 ? uploadedUrls : ["string"] // Using "string" as default value
+        uploads: uploadedUrls
       };
 
       console.log('Creating remark with data:', requestData);
       
-      const response = await axiosInstance.post('/report-remark/', requestData, {
+      const response = await axiosInstance.post('report-remark/', requestData, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -220,7 +231,9 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
       let errorMessage = 'Failed to create remark. Please try again.';
       
       if (err.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
+        errorMessage = Array.isArray(err.response.data.detail) 
+          ? err.response.data.detail[0]?.msg || 'Validation error'
+          : err.response.data.detail;
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -243,7 +256,7 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
 
       const sanitizedRemark = DOMPurify.sanitize(selectedRemark.remark_text.trim());
       
-      const response = await axiosInstance.put(`/report-remark/${selectedRemark.id}`, {
+      const response = await axiosInstance.patch(`report-remark/${selectedRemark.id}`, {
         remark_text: sanitizedRemark,
         uploads: selectedRemark.uploads
       }, {
@@ -286,7 +299,7 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
       setIsSubmitting(true);
       setError('');
 
-      await axiosInstance.delete(`/report-remark/${remarkId}`, {
+      await axiosInstance.delete(`report-remark/${remarkId}`, {
         headers: {
           'Accept': 'application/json'
         }
@@ -582,6 +595,11 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
                               src={url}
                               alt={`Attachment ${index + 1}`}
                               className="h-24 w-full object-cover rounded-lg hover:opacity-75 transition-opacity duration-200"
+                              onError={(e) => {
+                                console.error('Image load failed:', url);
+                                // Set a fallback image or hide the broken image
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
                             />
                           )}
                         </a>
