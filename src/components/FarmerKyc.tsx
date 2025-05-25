@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaLeaf, FaSpinner, FaChartLine } from 'react-icons/fa';
+import { FaCalendarAlt, FaLeaf, FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import { API_CONFIG } from '../config/api';
 
@@ -131,46 +131,6 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
     if (financialYear) fetchActivity();
   }, [applicationId, financialYear]);
 
-  const renderSeasons = (seasons: any[]) => {
-    if (!seasons?.length) return null;
-    return (
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <FaCalendarAlt className="text-green-600" />
-          Seasonal Activities
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {seasons.map((season: any, idx: number) => (
-            <div key={idx} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-medium text-gray-900">{season.season_name}</h4>
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Active
-                </span>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <FaLeaf className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">
-                    {season.crops.map((c: any) => c.crop_name).join(', ')}
-                  </span>
-                </div>
-                {season.expected_yield && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <FaChartLine className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm">
-                      Expected: {season.expected_yield}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const renderImages = (images: string[], title: string) => {
     if (!images?.length) return null;
     return (
@@ -222,15 +182,115 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
       switch (type.toLowerCase()) {
         case 'farming':
           return (
-            <>
-              <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
-              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
-              <p><span className="font-semibold">Irrigation Types:</span> {data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
-              <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
-              <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured ? 'Yes' : 'No'}</p>
-              <p><span className="font-semibold">Post Harvest Storage:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
-              {data.seasons && renderSeasons(data.seasons)}
-            </>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <p><span className="font-semibold">Land Owned:</span> {data.land_owned} {data.area_unit}</p>
+                <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area} {data.area_unit}</p>
+                <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
+                <p><span className="font-semibold">Farm Storage Available:</span> {data.is_farm_storage_available ? 'Yes' : 'No'}</p>
+                <p><span className="font-semibold">Post Harvest Storage:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+              </div>
+
+              {/* Irrigation Types */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Irrigation Types:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.irrigations?.map((i: any) => (
+                    <div key={i.irrigation_type_id} className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-blue-800">{i.irrigation_type}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Equipment */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Equipment:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.equipments?.map((e: any) => (
+                    <div key={e.equipment_id} className="bg-purple-50 rounded-lg p-3">
+                      <p className="text-purple-800">{e.equipment_name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seasonal Activities */}
+              {data.seasons && data.seasons.length > 0 && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                    <FaCalendarAlt className="text-green-600" />
+                    Seasonal Activities
+                  </h3>
+                  <div className="grid grid-cols-1 gap-6">
+                    {data.seasons.map((season: any) => (
+                      <div key={season.season_id} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-medium text-gray-900">{season.season_name}</h4>
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Active
+                          </span>
+                        </div>
+                        
+                        {/* Crops */}
+                        <div className="mb-4">
+                          <h5 className="text-sm font-semibold text-gray-700 mb-2">Crops:</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {season.crops.map((crop: any) => (
+                              <div key={crop.crop_id} className="bg-green-50 rounded-lg p-2">
+                                <p className="text-sm text-green-800">{crop.crop_name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Crop Inputs */}
+                        {season.crop_inputs && season.crop_inputs.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-semibold text-gray-700 mb-2">Crop Inputs:</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {season.crop_inputs.map((input: any) => (
+                                <div key={input.crop_input_id} className="bg-yellow-50 rounded-lg p-2">
+                                  <div className="flex justify-between items-center">
+                                    <p className="text-sm text-yellow-800 font-medium">{input.crop_input_name}</p>
+                                    <p className="text-sm text-yellow-600">
+                                      {input.crop_input_quantity} {input.crop_input_quantity_unit}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Field GPS Image */}
+              {data.field_gps_image && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Field GPS Image:</h3>
+                  <div className="relative w-64 h-64">
+                    <img
+                      src={signedUrls[data.field_gps_image] || ''}
+                      alt="Field GPS"
+                      className="w-full h-full object-cover rounded-lg shadow-md"
+                      loading="lazy"
+                      onError={async (e) => {
+                        const url = await getImageUrl(data.field_gps_image);
+                        (e.target as HTMLImageElement).src = url;
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Activity Images */}
+              {data.images?.[0] && renderImages(data.images[0], "Farming Images")}
+            </div>
           );
         case 'dairy':
           return (
@@ -256,13 +316,90 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
           );
         case 'plantation':
           return (
-            <>
-              <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
-              <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured ? 'Yes' : 'No'}</p>
-              <p><span className="font-semibold">Post Harvest Facility:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
-              <p><span className="font-semibold">Irrigations:</span> {data.irrigations?.map((i: any) => i.irrigation_type).join(', ') || 'N/A'}</p>
-              <p><span className="font-semibold">Equipments:</span> {data.equipments?.map((e: any) => e.equipment_name).join(', ') || 'N/A'}</p>
-            </>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <p><span className="font-semibold">Cultivation Area:</span> {data.cultivation_area || 'N/A'} {data.area_unit}</p>
+                <p><span className="font-semibold">Crop Insurance:</span> {data.is_crop_insured}</p>
+                <p><span className="font-semibold">Post Harvest Facility:</span> {data.is_post_harvest_storage_available ? 'Yes' : 'No'}</p>
+              </div>
+
+              {/* Irrigations */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Irrigation Types:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.irrigations?.map((i: any) => (
+                    <div key={i.irrigation_type_id} className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-blue-800">{i.irrigation_type}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Equipment */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Equipment:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.equipments?.map((e: any) => (
+                    <div key={e.equipment_id} className="bg-purple-50 rounded-lg p-3">
+                      <p className="text-purple-800">{e.equipment_name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Crops List */}
+              {data.crops && data.crops.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Crops:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.crops.map((crop: any) => (
+                      <div key={crop.crop_id} className="bg-green-50 rounded-lg p-3">
+                        <p className="text-green-800">{crop.crop_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Crop Inputs */}
+              {data.crop_inputs && data.crop_inputs.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Crop Inputs:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {data.crop_inputs.map((input: any) => (
+                      <div key={input.crop_input_id} className="bg-yellow-50 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <p className="text-yellow-800 font-medium">{input.crop_input_name}</p>
+                          <p className="text-yellow-600">
+                            {input.crop_input_quantity} {input.crop_input_quantity_unit}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Field GPS Image */}
+              {data.field_gps_image && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Field GPS Image:</h3>
+                  <div className="relative w-64 h-64">
+                    <img
+                      src={signedUrls[data.field_gps_image] || ''}
+                      alt="Field GPS"
+                      className="w-full h-full object-cover rounded-lg shadow-md"
+                      loading="lazy"
+                      onError={async (e) => {
+                        const url = await getImageUrl(data.field_gps_image);
+                        (e.target as HTMLImageElement).src = url;
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           );
         case 'goat':
           return (
@@ -278,12 +415,62 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
           );
         case 'mushroom':
           return (
-            <>
-              <p><span className="font-semibold">No. of Cylinders:</span> {data.no_of_cylinders || 0}</p>
-              <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
-              <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
-              <p><span className="font-semibold">Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
-            </>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <p><span className="font-semibold">No. of Cylinders:</span> {data.no_of_cylinders || 0}</p>
+                <p><span className="font-semibold">Shed Capacity:</span> {data.shed_capacity || 'N/A'}</p>
+                <p><span className="font-semibold">Shed Facility Dimension:</span> {data.shed_facility_dimension || 'N/A'}</p>
+                <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>
+              </div>
+
+              {/* Breeds */}
+              {data.breeds && data.breeds.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Mushroom Breeds:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.breeds.map((breed: any) => (
+                      <div key={breed.breed_type_id} className="bg-purple-50 rounded-lg p-3">
+                        <p className="text-purple-800">{breed.breed_type}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Facilities */}
+              {data.facilities && data.facilities.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Facilities:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.facilities.map((facility: any) => (
+                      <div key={facility.facility_id} className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-blue-800">{facility.facility_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Facility GPS Image */}
+              {data.facility_gps_image && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Facility GPS Image:</h3>
+                  <div className="relative w-64 h-64">
+                    <img
+                      src={signedUrls[data.facility_gps_image] || ''}
+                      alt="Facility GPS"
+                      className="w-full h-full object-cover rounded-lg shadow-md"
+                      loading="lazy"
+                      onError={async (e) => {
+                        const url = await getImageUrl(data.facility_gps_image);
+                        (e.target as HTMLImageElement).src = url;
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           );
         case 'fishery':
           return (
