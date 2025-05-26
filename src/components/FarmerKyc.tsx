@@ -308,8 +308,8 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
             <div className="space-y-4">
               {/* Basic Information */}
               <div className="space-y-3">
-                <p><span className="font-semibold">Hens:</span> {data.no_hen || 0}</p>
-                <p><span className="font-semibold">Cocks:</span> {data.no_cock || 0}</p>
+                <p><span className="font-semibold">Hens:</span> {data.no_of_hen || 0}</p>
+                <p><span className="font-semibold">Cocks:</span> {data.no_of_cock || 0}</p>
                 <p><span className="font-semibold">Coop Capacity:</span> {data.coop_capacity || 'N/A'}</p>
                 <p><span className="font-semibold">Feed Consumption:</span> {data.feed_consumption || 'N/A'} kg/day</p>
                 <p><span className="font-semibold">Insurance:</span> {data.insurance || 'N/A'}</p>

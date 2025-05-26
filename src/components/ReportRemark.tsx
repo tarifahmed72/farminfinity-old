@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes, FaUpload, FaImage, FaFile } from 'react-icons/fa';
+import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes, FaUpload, FaImage, FaFile, FaHistory } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import DOMPurify from 'dompurify';
 
@@ -20,6 +20,15 @@ interface ReportRemark {
   status?: 'active' | 'deleted';
 }
 
+interface FarmDataHistory {
+  id: string;
+  application_id: string;
+  farm_data_version_id: string;
+  version_number: number;
+  financial_year: string;
+  timestamp: string;
+}
+
 export default function ReportRemark({ applicationId, financialYear }: ReportRemarkProps) {
   const [remarks, setRemarks] = useState<ReportRemark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +41,37 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
   const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
+  const [histories, setHistories] = useState<FarmDataHistory[]>([]);
+  const [loadingHistories, setLoadingHistories] = useState(false);
+  const [currentVersionId, setCurrentVersionId] = useState<string | null>(null);
+
+  // Fetch farm data histories
+  useEffect(() => {
+    const fetchHistories = async () => {
+      if (!applicationId) return;
+
+      try {
+        setLoadingHistories(true);
+        const response = await axiosInstance.get(`farm-data-histories/${applicationId}`);
+        if (response.data) {
+          // Filter histories to match the current financial year
+          const matchingHistory = response.data.find((history: FarmDataHistory) => 
+            history.financial_year === financialYear
+          );
+          setHistories(response.data);
+          if (matchingHistory) {
+            setCurrentVersionId(matchingHistory.farm_data_version_id);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching histories:', err);
+      } finally {
+        setLoadingHistories(false);
+      }
+    };
+
+    fetchHistories();
+  }, [applicationId, financialYear]);
 
   // Fetch remarks
   useEffect(() => {
@@ -130,6 +170,11 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
     setUploadPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Generate random ID
+  const generateRandomId = () => {
+    return 'remark_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
+
   // Create new remark
   const createRemark = async () => {
     if (!newRemark.trim() || !applicationId || !financialYear || isSubmitting) {
@@ -169,12 +214,10 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
             });
             
             if (uploadResponse.data?.filename) {
-              // Construct the URL using the filename from GCS upload response
-              const fileUrl = `https://dev-api.farmeasytechnologies.com/uploads/${uploadResponse.data.filename}`;
-              uploadedUrls.push(fileUrl);
+              // Store just the filename instead of full URL
+              uploadedUrls.push(uploadResponse.data.filename);
               console.log('File uploaded successfully:', {
-                filename: uploadResponse.data.filename,
-                url: fileUrl
+                filename: uploadResponse.data.filename
               });
             } else {
               console.warn('Upload response missing filename:', uploadResponse.data);
@@ -190,10 +233,9 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
         }
       }
       
-      // Create remark with the complete URLs
       const requestData = {
-        id: '', // Empty string as shown in the API docs
-        farm_data_history_id: applicationId,
+        id: generateRandomId(),
+        farm_data_history_id: currentVersionId,
         remark_text: sanitizedRemark,
         uploads: uploadedUrls
       };
@@ -371,10 +413,20 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <FaComments className="mr-2" />
-          Report Remarks
-        </h3>
+        <div className="flex items-center space-x-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <FaComments className="mr-2" />
+            Report Remarks
+          </h3>
+          {loadingHistories ? (
+            <FaSpinner className="animate-spin text-gray-400 h-4 w-4" />
+          ) : histories.length > 0 && (
+            <div className="flex items-center text-sm text-gray-500">
+              <FaHistory className="mr-1" />
+              <span>Version {histories[0]?.version_number || 1}</span>
+            </div>
+          )}
+        </div>
         {!isAddingNew && (
           <button
             onClick={() => setIsAddingNew(true)}
@@ -398,6 +450,14 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
             rows={4}
             disabled={isSubmitting}
           />
+          
+          {/* History Information */}
+          {histories.length > 0 && (
+            <div className="mt-2 text-sm text-gray-500 flex items-center">
+              <FaHistory className="mr-1" />
+              <span>Adding remark for version {histories[0]?.version_number || 1}</span>
+            </div>
+          )}
           
           {/* File Upload Section */}
           <div className="mt-4">
