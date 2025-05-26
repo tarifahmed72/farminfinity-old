@@ -60,7 +60,7 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
           );
           setHistories(response.data);
           if (matchingHistory) {
-            setCurrentVersionId(matchingHistory.farm_data_version_id);
+            setCurrentVersionId(matchingHistory.id);
           }
         }
       } catch (err: any) {
