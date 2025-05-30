@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FaUserCog, FaUserTie } from 'react-icons/fa';
+import { FaUserCog } from 'react-icons/fa';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -9,7 +9,7 @@ const Home = () => {
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-green-700 mb-4">Farm Infinity</h1>
-          <p className="text-gray-600">Choose your login method</p>
+          <p className="text-gray-600">Welcome to Farm Infinity Admin Portal</p>
         </div>
 
         <div className="space-y-4">
@@ -20,15 +20,6 @@ const Home = () => {
           >
             <FaUserCog className="text-xl" />
             <span className="text-lg font-medium">Login as Admin</span>
-          </button>
-
-          {/* Agent Login Button */}
-          <button
-            onClick={() => navigate('/agent-login')}
-            className="w-full flex items-center justify-center gap-3 bg-white text-green-600 py-4 px-6 rounded-lg hover:bg-gray-50 transition duration-200 border-2 border-green-600 shadow-lg hover:shadow-xl"
-          >
-            <FaUserTie className="text-xl" />
-            <span className="text-lg font-medium">Login as Agent</span>
           </button>
         </div>
       </div>

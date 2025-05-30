@@ -11,7 +11,6 @@ import FarmerDetails from "./components/FarmerDetails";
 import FPO from "./components/FPO";
 import FarmerApplication from "./components/FarmerApplication";
 import Home from './pages/Home';
-import AgentLogin from './pages/AgentLogin';
 import AdminLogin from './pages/AdminLogin';
 import { isAuthenticated, getUserType, refreshAccessToken } from './utils/auth';
 import { useEffect } from 'react';
@@ -84,7 +83,6 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/agent-login" element={<AgentLogin />} />
         </Route>
 
         {/* Protected Routes - With Sidebar/Header */}

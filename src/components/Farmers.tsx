@@ -41,6 +41,8 @@ const Farmers = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [villages, setVillages] = useState<string[]>([]);
+  const [selectedVillage, setSelectedVillage] = useState<string>('');
   const ITEMS_PER_PAGE = 20;
 
   // Check authentication on mount and handle refresh
@@ -113,10 +115,11 @@ const Farmers = () => {
         if (status !== 'all') {
           url += `&status=${status}`;
         }
-
-        if (import.meta.env.DEV) {
-          console.debug('Fetching farmers:', { url, query, status, page });
+        if (selectedVillage) {
+          url += `&village=${encodeURIComponent(selectedVillage)}`;
         }
+
+        console.log('Fetching farmers with URL:', url);
 
         const response = await axiosInstance.get(url);
         
@@ -184,7 +187,7 @@ const Farmers = () => {
         setSearchLoading(false);
       }
     }, 300),
-    [navigate]
+    [navigate, selectedVillage]
   );
 
   useEffect(() => {
@@ -254,6 +257,13 @@ const Farmers = () => {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStatus(e.target.value);
     setCurrentPage(1); // Reset to first page when changing status
+  };
+
+  const handleVillageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedVillage(e.target.value);
+    setCurrentPage(1); // Reset to first page when changing village
+    // Trigger a new search with the selected village
+    debouncedFetch(searchQuery, selectedStatus, 1);
   };
 
   const handleNextPage = () => {
@@ -416,6 +426,23 @@ const Farmers = () => {
     </div>
   );
 
+  // Add useEffect for fetching villages
+  useEffect(() => {
+    const fetchVillages = async () => {
+      try {
+        const response = await axiosInstance.get('/villages');
+        console.log('Villages API Response:', response.data);
+        if (Array.isArray(response.data)) {
+          setVillages(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching villages:', error);
+      }
+    };
+
+    fetchVillages();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -488,6 +515,22 @@ const Farmers = () => {
               >
                 <option value="all">All Statuses</option>
                 <option value="2">Submitted</option>
+              </select>
+            </div>
+
+            <div className="md:w-48">
+              <select
+                value={selectedVillage}
+                onChange={handleVillageChange}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                disabled={searchLoading}
+              >
+                <option value="">All Villages</option>
+                {villages.map((village) => (
+                  <option key={village} value={village}>
+                    {village}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
