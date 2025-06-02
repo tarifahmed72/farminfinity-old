@@ -37,7 +37,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    id: '',
     fpo_id: '',
     entity_name: ''
   });
@@ -49,7 +48,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
 
     try {
       const formattedData = {
-        id: formData.id,
         fpo_id: formData.fpo_id,
         entity_name: formData.entity_name,
         constitution: CONSTITUTIONS[generateRandomNumber(0, CONSTITUTIONS.length - 1)],
@@ -122,21 +120,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              ID*
-            </label>
-            <input
-              type="text"
-              name="id"
-              value={formData.id}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter FPO ID"
-            />
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               FPO ID*
