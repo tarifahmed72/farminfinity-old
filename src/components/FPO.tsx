@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { AxiosResponse } from 'axios';
 import axiosInstance from '../utils/axios';
 import axios from 'axios';
-import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaFileAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
+import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
 import { API_CONFIG } from '../config/api';
+import CreateFPO from './CreateFPO';
 
 interface FPOData {
   id: string;
@@ -45,10 +46,11 @@ const FPO = () => {
   const [selectedFPO, setSelectedFPO] = useState<FPOData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedState, setSelectedState] = useState('all');
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const getSignedUrl = async (filename: string) => {
     if (!filename) return null;
@@ -84,30 +86,30 @@ const FPO = () => {
     setSignedUrls(prev => ({ ...prev, ...newSignedUrls }));
   };
 
+  const fetchFPOs = async () => {
+    try {
+      const response: AxiosResponse<FPOData[]> = await axiosInstance.get(
+        '/fpos/?skip=0&limit=100'
+      );
+      setFpos(response.data);
+
+      // Load signed URLs for all FPO images
+      const allImages = response.data.flatMap(fpo => [
+        fpo.pan_image,
+        fpo.incorporation_doc_img,
+        fpo.registration_no_img,
+        fpo.director_shareholder_list_image
+      ].filter(Boolean) as string[]);
+
+      await loadSignedUrls(allImages);
+    } catch (err: any) {
+      setError(`Error fetching FPO list: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchFPOs = async () => {
-      try {
-        const response: AxiosResponse<FPOData[]> = await axiosInstance.get(
-          '/fpos/?skip=0&limit=100'
-        );
-        setFpos(response.data);
-
-        // Load signed URLs for all FPO images
-        const allImages = response.data.flatMap(fpo => [
-          fpo.pan_image,
-          fpo.incorporation_doc_img,
-          fpo.registration_no_img,
-          fpo.director_shareholder_list_image
-        ].filter(Boolean) as string[]);
-
-        await loadSignedUrls(allImages);
-      } catch (err: any) {
-        setError(`Error fetching FPO list: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFPOs();
   }, []);
 
@@ -146,6 +148,11 @@ const FPO = () => {
         </div>
       </div>
     );
+  };
+
+  const handleCreateSuccess = () => {
+    setShowCreateForm(false);
+    fetchFPOs();
   };
 
   if (loading) {
@@ -294,22 +301,18 @@ const FPO = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Farmer Producer Organizations</h1>
-            <p className="mt-1 text-sm text-gray-500">Manage and view all registered FPOs</p>
+            <h1 className="text-2xl font-bold text-gray-900">FPO Directory</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {filteredFPOs.length} FPOs found
+            </p>
           </div>
           
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-500'}`}
+              onClick={() => setShowCreateForm(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              <FaBuilding className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-500'}`}
-            >
-              <FaFileAlt className="h-5 w-5" />
+              Create New FPO
             </button>
           </div>
         </div>
@@ -447,6 +450,18 @@ const FPO = () => {
                   {renderImages([selectedFPO.director_shareholder_list_image].filter(Boolean), "Director/Shareholder List")}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create form modal */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <CreateFPO
+                onSuccess={handleCreateSuccess}
+                onCancel={() => setShowCreateForm(false)}
+              />
             </div>
           </div>
         )}
