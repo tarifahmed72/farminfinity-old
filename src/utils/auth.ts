@@ -8,6 +8,14 @@ interface TokenResponse {
   expires_in: number;
 }
 
+interface CodeExchangeResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user_type: UserType;
+}
+
 const isValidToken = (token: string | null): token is string => {
   return typeof token === 'string' && token.length > 0;
 };
@@ -49,6 +57,9 @@ export const clearTokens = () => {
   localStorage.removeItem('token');
 };
 
+// Add a buffer time (5 minutes) before token expiry to trigger refresh
+const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 export const isTokenExpired = () => {
   const expiry = localStorage.getItem(TOKEN_KEYS.TOKEN_EXPIRY);
   if (!expiry) return true;
@@ -59,8 +70,8 @@ export const isTokenExpired = () => {
     return true;
   }
   
-  // Add 30-second buffer to prevent edge cases
-  return Date.now() > (expiryTime - 30000);
+  // Add buffer time to prevent edge cases
+  return Date.now() > (expiryTime - TOKEN_REFRESH_BUFFER);
 };
 
 export const isAuthenticated = () => {
@@ -88,7 +99,7 @@ export const refreshAccessToken = async (): Promise<boolean> => {
     }
 
     const response = await axios.post(
-      `${API_CONFIG.BASE_URL}${API_CONFIG.AUTH_ENDPOINTS.REFRESH_TOKEN}`,
+      `${API_CONFIG.BASE_URL}/refresh-token`,
       formData,
       {
         headers: {
@@ -109,7 +120,35 @@ export const refreshAccessToken = async (): Promise<boolean> => {
     return false;
   } catch (error) {
     console.error('Token refresh error:', error);
-    clearTokens();
+    // Only clear tokens if it's not a network error
+    if (axios.isAxiosError(error) && error.response) {
+      clearTokens();
+    }
+    return false;
+  }
+};
+
+export const exchangeCode = async (code: string): Promise<boolean> => {
+  try {
+    const response = await axios.post<CodeExchangeResponse>(
+      `${API_CONFIG.BASE_URL}/exchange-code`,
+      { code },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        }
+      }
+    );
+
+    if (response.data.access_token) {
+      setTokens(response.data, response.data.user_type);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Code exchange error:', error);
     return false;
   }
 }; 

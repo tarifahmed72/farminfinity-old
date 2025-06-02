@@ -12,21 +12,20 @@ import FPO from "./components/FPO";
 import FarmerApplication from "./components/FarmerApplication";
 import Home from './pages/Home';
 import AdminLogin from './pages/AdminLogin';
-import { isAuthenticated, getUserType, refreshAccessToken } from './utils/auth';
-import { useEffect } from 'react';
+import { isAuthenticated, getUserType } from './utils/auth';
 import FieldAgentList from './components/FieldAgentList';
+import { useTokenRefresh } from './hooks/useTokenRefresh';
+
+// Update ProtectedRoute interface
+interface ProtectedRouteProps {
+  children: React.ReactNode | ((props: { userType: string }) => React.ReactNode);
+  allowedUserTypes?: string[];
+}
 
 // Protected Route component with improved auth handling
-const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { children: React.ReactNode, allowedUserTypes?: string[] }) => {
-  useEffect(() => {
-    // Try to refresh token on protected route mount
-    const tryRefreshToken = async () => {
-      if (!isAuthenticated()) {
-        await refreshAccessToken();
-      }
-    };
-    tryRefreshToken();
-  }, []);
+const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: ProtectedRouteProps) => {
+  // Use token refresh hook
+  useTokenRefresh();
 
   // Check authentication using the auth utility
   if (!isAuthenticated()) {
@@ -45,11 +44,18 @@ const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: { c
     return <Navigate to="/" replace />;
   }
 
+  // Handle function children
+  if (typeof children === 'function') {
+    return <>{children({ userType })}</>;
+  }
+
   return <>{children}</>;
 };
 
 // Layout for authenticated pages with sidebar and header
 const DashboardLayout = () => {
+  // Use token refresh hook
+  useTokenRefresh();
   const userType = getUserType();
   
   // If not authenticated, redirect to home
@@ -81,6 +87,7 @@ function App() {
       <Routes>
         {/* Auth Routes - No Sidebar/Header */}
         <Route element={<AuthLayout />}>
+          <Route index element={<Home />} />
           <Route path="/" element={<Home />} />
           <Route path="/admin-login" element={<AdminLogin />} />
         </Route>
@@ -162,9 +169,24 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Catch-all route for authenticated users - redirect to appropriate dashboard */}
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
+                {({ userType }) => (
+                  <Navigate
+                    to={userType === 'ADMIN' ? '/dashboard' : '/farmers'}
+                    replace
+                  />
+                )}
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
-        {/* Catch all route - redirect to appropriate dashboard */}
+        {/* Final catch-all route - redirect to home */}
         <Route
           path="*"
           element={

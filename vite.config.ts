@@ -13,6 +13,7 @@ const normalizeUrl = (url: string) => {
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 3000,
     proxy: {
       '/api': {
         target: 'https://dev-api.farmeasytechnologies.com',
@@ -32,5 +33,9 @@ export default defineConfig({
     port: 3000,
     host: true,
     strictPort: true,
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true
   }
 })

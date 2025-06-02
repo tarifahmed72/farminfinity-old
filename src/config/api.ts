@@ -11,7 +11,7 @@ const API_BASE_URL = normalizeUrl(import.meta.env.VITE_API_URL || 'https://dev-a
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
   TIMEOUT: 30000,
-  TOKEN_REFRESH_INTERVAL: 60000, // 1 minute
+  TOKEN_REFRESH_INTERVAL: 4 * 60 * 1000, // 4 minutes (shorter than the buffer time)
   AUTH_ENDPOINTS: {
     LOGIN: '/login',
     REFRESH_TOKEN: '/refresh-token',

@@ -14,14 +14,14 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
     fpo_id: '',
     constitution: '',
     entity_name: '',
-    no_of_farmers: 0,
+    no_of_farmers: null as number | null,
     address: '',
     state: '',
     district: '',
-    area_of_operation: 0,
+    area_of_operation: null as number | null,
     establishment_year: '',
     major_crop_produced: [''],
-    previous_year_turnover: 0,
+    previous_year_turnover: null as number | null,
     contact_person_name: '',
     contact_person_phone: '',
     pan_no: '',
@@ -43,10 +43,61 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
     setError(null);
 
     try {
-      await axiosInstance.post('/fpo/', formData);
+      // Format the data before sending
+      const formattedData = {
+        ...formData,
+        // Convert empty strings to null
+        fpo_id: formData.fpo_id || null,
+        constitution: formData.constitution || null,
+        entity_name: formData.entity_name || null,
+        no_of_farmers: formData.no_of_farmers,
+        address: formData.address || null,
+        state: formData.state || null,
+        district: formData.district || null,
+        area_of_operation: formData.area_of_operation,
+        establishment_year: formData.establishment_year || null,
+        previous_year_turnover: formData.previous_year_turnover,
+        contact_person_name: formData.contact_person_name || null,
+        contact_person_phone: formData.contact_person_phone || null,
+        pan_no: formData.pan_no || null,
+        registration_no: formData.registration_no || null,
+        // Handle image fields
+        pan_image: formData.pan_image || null,
+        incorporation_doc_img: formData.incorporation_doc_img || null,
+        registration_no_img: formData.registration_no_img || null,
+        director_shareholder_list_image: formData.director_shareholder_list_image || null,
+        // Handle arrays
+        major_crop_produced: formData.major_crop_produced.filter(crop => crop.trim() !== '') || null
+      };
+
+      // Log the request data in development
+      if (import.meta.env.DEV) {
+        console.log('Creating FPO with data:', formattedData);
+      }
+
+      const response = await axiosInstance.post('/fpo/', formattedData);
+      
+      // Log the response in development
+      if (import.meta.env.DEV) {
+        console.log('FPO created successfully:', response.data);
+      }
+
       onSuccess();
     } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to create FPO');
+      console.error('Error creating FPO:', error);
+      
+      // Handle different types of error responses
+      if (error.response?.data?.detail) {
+        setError(error.response.data.detail);
+      } else if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (typeof error.response?.data === 'string') {
+        setError(error.response.data);
+      } else if (error.message) {
+        setError(error.message);
+      } else {
+        setError('Failed to create FPO. Please check your input and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,9 +105,26 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
+    // Handle different input types
+    if (type === 'number') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value === '' ? null : Number(value)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleCropChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? Number(value) : value
+      major_crop_produced: value ? [value] : [''] // Allow empty array
     }));
   };
 
@@ -85,7 +153,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.fpo_id}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -99,7 +166,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.entity_name}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -113,7 +179,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.constitution}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -124,10 +189,9 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
             <input
               type="number"
               name="no_of_farmers"
-              value={formData.no_of_farmers}
+              value={formData.no_of_farmers ?? ''}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -142,7 +206,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.state}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -156,7 +219,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.district}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -169,7 +231,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.address}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -180,10 +241,9 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
             <input
               type="number"
               name="area_of_operation"
-              value={formData.area_of_operation}
+              value={formData.area_of_operation ?? ''}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -198,7 +258,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.establishment_year}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -209,10 +268,9 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
             <input
               type="number"
               name="previous_year_turnover"
-              value={formData.previous_year_turnover}
+              value={formData.previous_year_turnover ?? ''}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -227,7 +285,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.contact_person_name}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -241,7 +298,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.contact_person_phone}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -256,7 +312,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.pan_no}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
 
@@ -270,7 +325,6 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               value={formData.registration_no}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
             />
           </div>
         </div>
@@ -328,6 +382,21 @@ const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
               Director/Shareholder List Collected
             </label>
           </div>
+        </div>
+
+        {/* Add Major Crops field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Major Crops Produced
+          </label>
+          <input
+            type="text"
+            name="major_crop_produced"
+            value={formData.major_crop_produced[0] || ''}
+            onChange={handleCropChange}
+            placeholder="Enter major crops (comma separated)"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
         </div>
 
         {error && (
