@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaUser, FaSpinner, FaExclamationTriangle, FaEdit } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface FamilyMember {
   id: string;
@@ -27,6 +28,9 @@ export default function FamilyMembers({ bioId }: FamilyMembersProps) {
   const [error, setError] = useState('');
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   // Fetch family members
   useEffect(() => {

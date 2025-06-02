@@ -22,6 +22,7 @@ import {
   FaHome,
   FaLeaf
 } from 'react-icons/fa';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface Bio {
   id?: string;
@@ -118,6 +119,9 @@ const FarmerDetails: React.FC = () => {
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
   const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({});
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>('');
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   const extractImageName = (imagePath: string): string => {
     // Handle "None" case

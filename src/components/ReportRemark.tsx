@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FaPlus, FaSpinner, FaExclamationTriangle, FaEdit, FaComments, FaTrash, FaCheck, FaTimes, FaUpload, FaImage, FaFile, FaHistory } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import DOMPurify from 'dompurify';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface ReportRemarkProps {
   applicationId?: string;
@@ -44,6 +45,9 @@ export default function ReportRemark({ applicationId, financialYear }: ReportRem
   const [histories, setHistories] = useState<FarmDataHistory[]>([]);
   const [loadingHistories, setLoadingHistories] = useState(false);
   const [currentVersionId, setCurrentVersionId] = useState<string | null>(null);
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   // Fetch farm data histories
   useEffect(() => {

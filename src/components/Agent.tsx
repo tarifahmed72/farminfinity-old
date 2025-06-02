@@ -1,6 +1,7 @@
 import  { useState, useEffect } from 'react';
 import { AxiosResponse } from 'axios';
 import axiosInstance from '../utils/axios';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface AgentData {
   id: string;
@@ -25,10 +26,12 @@ interface AgentData {
   updated_at: string;
 }
 
-const Agent= () => {
+const Agent: React.FC = () => {
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useTokenRefresh();
 
   useEffect(() => {
     const fetchAgentsData = async () => {

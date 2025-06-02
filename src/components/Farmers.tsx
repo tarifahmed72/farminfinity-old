@@ -4,6 +4,7 @@ import { FaSearch, FaSpinner, FaUser, FaList, FaThLarge, FaChevronLeft, FaChevro
 import debounce from 'lodash/debounce';
 import axiosInstance from '../utils/axios';
 import { isAuthenticated, getUserType, refreshAccessToken } from '../utils/auth';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface ApiFarmer {
   id: string;
@@ -44,6 +45,9 @@ const Farmers = () => {
   const [villages, setVillages] = useState<string[]>([]);
   const [selectedVillage, setSelectedVillage] = useState<string>('');
   const ITEMS_PER_PAGE = 20;
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   // Check authentication on mount and handle refresh
   useEffect(() => {

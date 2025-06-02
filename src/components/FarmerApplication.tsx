@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { FaFileAlt, FaSpinner, FaExclamationTriangle, FaChevronRight, FaCalendarAlt, FaClock } from 'react-icons/fa';
 
 interface Application {
@@ -17,6 +18,9 @@ const FarmerApplication: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   useEffect(() => {
     const fetchApplications = async () => {

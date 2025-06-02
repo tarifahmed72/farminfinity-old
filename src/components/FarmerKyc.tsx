@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaLeaf, FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
 import { API_CONFIG } from '../config/api';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface FarmerKycProps {
   applicationId: string;
@@ -26,6 +27,9 @@ const FarmerKyc: React.FC<FarmerKycProps> = ({ applicationId, financialYear }) =
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   // Get token from localStorage
   const token = localStorage.getItem('keycloak-token');

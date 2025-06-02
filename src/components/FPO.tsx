@@ -5,6 +5,7 @@ import axios from 'axios';
 import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
 import { API_CONFIG } from '../config/api';
 import CreateFPO from './CreateFPO';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface FPOData {
   id: string;
@@ -42,6 +43,8 @@ interface SignedUrlResponse {
 }
 
 const FPO = () => {
+  useTokenRefresh();
+
   const [fpos, setFpos] = useState<FPOData[]>([]);
   const [selectedFPO, setSelectedFPO] = useState<FPOData | null>(null);
   const [loading, setLoading] = useState(true);

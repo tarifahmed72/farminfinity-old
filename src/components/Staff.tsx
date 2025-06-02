@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosInstance from '../utils/axios';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { 
   FaUser, 
   FaEnvelope, 
@@ -33,6 +34,9 @@ const Staff: React.FC = () => {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   // Get token from localStorage
   const token = localStorage.getItem('token');

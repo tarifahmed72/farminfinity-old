@@ -16,7 +16,8 @@ export const API_CONFIG = {
     LOGIN: '/login',
     REFRESH_TOKEN: '/refresh-token',
     VERIFY_OTP: '/verify-otp',
-    SEND_OTP: '/send-otp'
+    SEND_OTP: '/send-otp',
+    EXCHANGE_CODE: '/exchange-code'
   }
 };
 
@@ -27,9 +28,9 @@ export const TOKEN_KEYS = {
   USER_TYPE: 'user_type'
 };
 
-export const USER_TYPES = {
+export type UserType = 'ADMIN' | 'AGENT';
+
+export const USER_TYPES: Record<string, UserType> = {
   ADMIN: 'ADMIN',
   AGENT: 'AGENT'
-} as const;
-
-export type UserType = typeof USER_TYPES[keyof typeof USER_TYPES]; 
+} as const; 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../utils/axios';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface CreateFPOProps {
   onSuccess: () => void;
@@ -8,6 +9,9 @@ interface CreateFPOProps {
 }
 
 const CreateFPO: React.FC<CreateFPOProps> = ({ onSuccess, onCancel }) => {
+  // Add token refresh hook
+  useTokenRefresh();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({

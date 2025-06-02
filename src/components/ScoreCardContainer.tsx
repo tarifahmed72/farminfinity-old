@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, CircularProgress, Alert, Button } from '@mui/material';
 import ScoreCard from './Scorecard';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface ScoreCardContainerProps {
   farmerId: string;
@@ -53,6 +54,9 @@ const ScoreCardContainer: React.FC<ScoreCardContainerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMasked, setShowMasked] = useState(true);
+
+  // Add token refresh hook
+  useTokenRefresh();
 
   useEffect(() => {
     const fetchScoreCard = async () => {

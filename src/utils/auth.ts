@@ -130,6 +130,11 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 
 export const exchangeCode = async (code: string): Promise<boolean> => {
   try {
+    if (!code || typeof code !== 'string') {
+      console.error('Invalid code provided for exchange');
+      return false;
+    }
+
     const response = await axios.post<CodeExchangeResponse>(
       `${API_CONFIG.BASE_URL}/exchange-code`,
       { code },
@@ -137,18 +142,26 @@ export const exchangeCode = async (code: string): Promise<boolean> => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-        }
+        },
+        timeout: API_CONFIG.TIMEOUT
       }
     );
 
-    if (response.data.access_token) {
-      setTokens(response.data, response.data.user_type);
-      return true;
+    if (!response.data || !response.data.access_token) {
+      console.error('Invalid response from code exchange:', response.data);
+      return false;
     }
 
-    return false;
+    // Store tokens and user type
+    setTokens(response.data, response.data.user_type);
+
+    // Also store the token in keycloak-token for backward compatibility
+    localStorage.setItem('keycloak-token', response.data.access_token);
+
+    return true;
   } catch (error) {
     console.error('Code exchange error:', error);
+    clearTokens();
     return false;
   }
 }; 

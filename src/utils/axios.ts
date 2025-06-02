@@ -40,6 +40,11 @@ const onTokenRefreshed = (token: string) => {
 // Request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
+    // Skip auth header for code exchange endpoint
+    if (config.url === API_CONFIG.AUTH_ENDPOINTS.EXCHANGE_CODE) {
+      return config;
+    }
+
     // Ensure the URL is HTTPS in production
     if (!import.meta.env.DEV && config.url) {
       config.url = normalizeUrl(config.url);
