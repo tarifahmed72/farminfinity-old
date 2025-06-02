@@ -12,9 +12,9 @@ import FPO from "./components/FPO";
 import FarmerApplication from "./components/FarmerApplication";
 import Home from './pages/Home';
 import AdminLogin from './pages/AdminLogin';
+import AgentLogin from './pages/AgentLogin';
 import { isAuthenticated, getUserType } from './utils/auth';
 import FieldAgentList from './components/FieldAgentList';
-import { useTokenRefresh } from './hooks/useTokenRefresh';
 
 // Update ProtectedRoute interface
 interface ProtectedRouteProps {
@@ -22,29 +22,18 @@ interface ProtectedRouteProps {
   allowedUserTypes?: string[];
 }
 
-// Protected Route component with improved auth handling
-const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: ProtectedRouteProps) => {
-  // Use token refresh hook
-  useTokenRefresh();
+// ProtectedRoute component
+const ProtectedRoute = ({ children, allowedUserTypes = [] }: ProtectedRouteProps) => {
+  const userType = getUserType() || 'GUEST'; // Provide a default value
 
-  // Check authentication using the auth utility
   if (!isAuthenticated()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin-login" replace />;
   }
 
-  const userType = getUserType();
-  if (!userType || !allowedUserTypes.includes(userType)) {
-    // If user type is not allowed, redirect to appropriate dashboard
-    if (userType === 'ADMIN') {
-      return <Navigate to="/dashboard" replace />;
-    } else if (userType === 'AGENT') {
-      return <Navigate to="/farmers" replace />;
-    }
-    // If unknown user type, redirect to home
-    return <Navigate to="/" replace />;
+  if (allowedUserTypes.length > 0 && !allowedUserTypes.includes(userType)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
-  // Handle function children
   if (typeof children === 'function') {
     return <>{children({ userType })}</>;
   }
@@ -54,13 +43,11 @@ const ProtectedRoute = ({ children, allowedUserTypes = ['ADMIN', 'AGENT'] }: Pro
 
 // Layout for authenticated pages with sidebar and header
 const DashboardLayout = () => {
-  // Use token refresh hook
-  useTokenRefresh();
   const userType = getUserType();
   
-  // If not authenticated, redirect to home
+  // If not authenticated, redirect to login
   if (!isAuthenticated()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin-login" replace />;
   }
   
   return (
@@ -90,6 +77,7 @@ function App() {
           <Route index element={<Home />} />
           <Route path="/" element={<Home />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/agent-login" element={<AgentLogin />} />
         </Route>
 
         {/* Protected Routes - With Sidebar/Header */}
@@ -154,7 +142,7 @@ function App() {
             }
           />
           <Route
-            path="/farmers_details/farmerId/:farmerId/applicationId/:applicationId"
+            path="/farmer/:id"
             element={
               <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
                 <FarmerDetails />
@@ -162,37 +150,14 @@ function App() {
             }
           />
           <Route
-            path="/farmers_applications/:id"
+            path="/farmer-application"
             element={
               <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
                 <FarmerApplication />
               </ProtectedRoute>
             }
           />
-
-          {/* Catch-all route for authenticated users - redirect to appropriate dashboard */}
-          <Route
-            path="*"
-            element={
-              <ProtectedRoute allowedUserTypes={['ADMIN', 'AGENT']}>
-                {({ userType }) => (
-                  <Navigate
-                    to={userType === 'ADMIN' ? '/dashboard' : '/farmers'}
-                    replace
-                  />
-                )}
-              </ProtectedRoute>
-            }
-          />
         </Route>
-
-        {/* Final catch-all route - redirect to home */}
-        <Route
-          path="*"
-          element={
-            <Navigate to="/" replace />
-          }
-        />
       </Routes>
     </Router>
   );

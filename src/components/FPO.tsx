@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AxiosResponse } from 'axios';
 import axiosInstance from '../utils/axios';
 import axios from 'axios';
-import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
+import { FaBuilding, FaSpinner, FaExclamationTriangle, FaUsers, FaMapMarkerAlt, FaPhoneAlt, FaTimesCircle, FaCheckCircle, FaSeedling, FaMoneyBillWave, FaCalendarAlt, FaSync } from 'react-icons/fa';
 import { API_CONFIG } from '../config/api';
 import CreateFPO from './CreateFPO';
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
@@ -55,6 +55,7 @@ const FPO = () => {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [fpoToDelete, setFpoToDelete] = useState<FPOData | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const getSignedUrl = async (filename: string) => {
     if (!filename) return null;
@@ -322,6 +323,18 @@ const FPO = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setIsRefreshing(true);
+                await fetchFPOs();
+                setIsRefreshing(false);
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+              disabled={isRefreshing}
+            >
+              <FaSync className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
             <button
               onClick={() => setShowCreateForm(true)}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
