@@ -51,6 +51,7 @@ const FPO = () => {
   const [selectedState, setSelectedState] = useState('all');
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [fpoToDelete, setFpoToDelete] = useState<FPOData | null>(null);
 
   const getSignedUrl = async (filename: string) => {
     if (!filename) return null;
@@ -153,6 +154,16 @@ const FPO = () => {
   const handleCreateSuccess = () => {
     setShowCreateForm(false);
     fetchFPOs();
+  };
+
+  const handleDelete = async (fpo: FPOData) => {
+    try {
+      await axiosInstance.delete(`/fpo/${fpo.id}`);
+      setFpoToDelete(null);
+      fetchFPOs(); // Refresh the list
+    } catch (error: any) {
+      setError(`Failed to delete FPO: ${error.response?.data?.detail || error.message}`);
+    }
   };
 
   if (loading) {
@@ -449,6 +460,18 @@ const FPO = () => {
                   {renderImages([selectedFPO.registration_no_img].filter(Boolean), "Registration Documents")}
                   {renderImages([selectedFPO.director_shareholder_list_image].filter(Boolean), "Director/Shareholder List")}
                 </div>
+
+                <div className="flex justify-end space-x-4 mt-8 pt-6 border-t">
+                  <button
+                    onClick={() => {
+                      setSelectedFPO(null);
+                      setFpoToDelete(selectedFPO);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Delete FPO
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -462,6 +485,32 @@ const FPO = () => {
                 onSuccess={handleCreateSuccess}
                 onCancel={() => setShowCreateForm(false)}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation modal */}
+        {fpoToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Delete</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete the FPO "{fpoToDelete.entity_name}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setFpoToDelete(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(fpoToDelete)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         )}
